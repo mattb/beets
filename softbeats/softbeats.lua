@@ -1,4 +1,4 @@
-local beats = include('softbeats/lib/libbeats.lua')
+local beats = include('lib/libbeats')
 local BeatClock = require "beatclock"
 
 local beat_clock
@@ -17,7 +17,7 @@ function init_beatclock(bpm)
   local clk_midi = midi.connect(1)
   clk_midi.event = beat_clock.process_mid
 
-  beat_clock.on_step = beats.advance_step
+  beat_clock.on_step = function() beats.advance_step(beat_clock) end
 end
 
 function init()

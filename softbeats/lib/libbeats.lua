@@ -21,7 +21,7 @@ local reverse_probability = 0
 local jump_probability = 0
 local jump_back_probability = 0
 
-beats.advance_step = function()
+beats.advance_step = function(beat_clock)
   crow.output[1]()
   if beatstep == 1 then
     crow.output[2]()
