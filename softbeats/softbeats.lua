@@ -33,7 +33,10 @@ function init()
   local file = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav"
   local bpm = 120
 
-  beats.init(file, bpm)
+  -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
+  local kicks = { 0, 3, 5, 7 }
+
+  beats.init(file, bpm, kicks)
   beats.add_params()
 
   init_beatclock(bpm)

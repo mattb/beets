@@ -22,17 +22,20 @@ local beat_start = 0
 local beat_end = 7
 local beat_count = 8
 local initial_bpm = 0
+local kickbeats = {}
 
 beats.advance_step = function(in_beatstep, in_bpm)
+  message = ""
+
   local current_rate = rate * (in_bpm / initial_bpm)
   beatstep = in_beatstep
   crow.output[1]()
   if beatstep == 1 then
     crow.output[2]()
   end
-  message = ""
+
   if(math.random(100) < stutter_probability) then
-    message = "STUTTER"
+    message = message .. " STUTTER"
     stutter_amount = math.random(4)
     softcut.loop_start(1, index * (duration / beat_count))
     softcut.loop_end(1, index * (duration / beat_count) + (duration / (64.0 / stutter_amount)))
@@ -40,6 +43,12 @@ beats.advance_step = function(in_beatstep, in_bpm)
     softcut.loop_start(1,0)
     softcut.loop_end(1,duration)
   end
+
+  if kickbeats[index] == 1 then
+    crow.output[3]()
+    message = message .. " KICK"
+  end
+
   softcut.position(1, index * (duration / beat_count))
 
   if(math.random(100) < reverse_probability) then
@@ -51,6 +60,7 @@ beats.advance_step = function(in_beatstep, in_bpm)
 
   index = index + 1
   if index > beat_end then
+    message = message .. " LOOP"
     index = beat_start
   end
 
@@ -64,22 +74,28 @@ beats.advance_step = function(in_beatstep, in_bpm)
     index = (index - 1) % 8
   end
 
-  if(beatstep == 0) then
+  if(beatstep == beat_count - 1) then
     message = message .. " RESET"
-    index = 0
+    index = beat_start
   end
+
   redraw()
 end
 
-beats.init = function(file, bpm)
-  initial_bpm = bpm
-  local ch, samples, samplerate = audio.file_info(file)
+beats.init = function(in_file, in_bpm, in_kickbeats)
+  kickbeats = {}
+  for i, beat in ipairs(in_kickbeats) do
+    kickbeats[beat] = 1
+  end
+
+  initial_bpm = in_bpm
+  local ch, samples, samplerate = audio.file_info(in_file)
   frames = samples
   rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
   duration = samples / 48000.0
   print("Frames: " .. frames .. " Rate: " .. rate .. " Duration: " .. duration)
 
-  softcut.buffer_read_mono(file,0,0,-1,1,1)
+  softcut.buffer_read_mono(in_file,0,0,-1,1,1)
   
   softcut.enable(1,1)
   softcut.buffer(1,1)
@@ -99,6 +115,7 @@ beats.init = function(file, bpm)
 
   crow.output[1].action = "pulse(0.001, 5, 1)"
   crow.output[2].action = "pulse(0.001, 5, 1)"
+  crow.output[3].action = "pulse(0.001, 5, 1)"
 end
 
 beats.add_params = function()
@@ -181,8 +198,8 @@ function beats:redraw()
   screen.level(15)
   screen.move(10 + 10 * beatstep, 20)
   screen.text("|")
-  screen.move(10 + 10 * index, 30)
-  screen.text("|")
+  screen.move(10 + 10 * index, 20)
+  screen.text("-")
   screen.move(10, 40)
   screen.text(message)
   screen.update()
