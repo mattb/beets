@@ -3,11 +3,6 @@ local beats = {}
 local ControlSpec = require "controlspec"
 local Formatters = require "formatters"
 
-local specs = {}
-specs.FILTER_FREQ = ControlSpec.new(1000, 20000, "exp", 0, 20000, "Hz")
-specs.FILTER_RESONANCE = ControlSpec.new(0, 1, "lin", 0, 0, "")
-specs.PERCENTAGE = ControlSpec.new(0, 1, "lin", 0.01, 0, "%")
-
 local frames
 local duration
 local rate
@@ -23,6 +18,13 @@ local beat_end = 7
 local beat_count = 8
 local initial_bpm = 0
 local kickbeats = {}
+
+local specs = {}
+specs.FILTER_FREQ = ControlSpec.new(0, 20000, "exp", 0, 20000, "Hz")
+specs.FILTER_RESONANCE = ControlSpec.new(0, 1, "lin", 0, 0.25, "")
+specs.PERCENTAGE = ControlSpec.new(0, 1, "lin", 0.01, 0, "%")
+specs.BEAT_START = ControlSpec.new(0, beat_count - 1, "lin", 1, 0, "")
+specs.BEAT_END = ControlSpec.new(0, beat_count - 1, "lin", 1, beat_count - 1, "")
 
 beats.advance_step = function(in_beatstep, in_bpm)
   message = ""
@@ -172,22 +174,18 @@ beats.add_params = function()
       softcut.post_filter_rq(1, value)
     end}
 
-  params:add{type = "number",
+  params:add{type = "control", 
     id = "beat_start",
     name = "Beat Start",
-    min = 0,
-    max = beat_count - 1,
-    default = 0,
+    controlspec = specs.BEAT_START,
     action = function(value)
       beat_start = value
     end}
 
-  params:add{type = "number",
+  params:add{type = "control", 
     id = "beat_end",
     name = "Beat End",
-    min = 0,
-    max = beat_count - 1,
-    default = beat_count - 1,
+    controlspec = specs.BEAT_END,
     action = function(value)
       beat_end = value
     end}
