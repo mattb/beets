@@ -18,6 +18,9 @@ local stutter_probability = 0
 local reverse_probability = 0
 local jump_probability = 0
 local jump_back_probability = 0
+local beat_start = 0
+local beat_end = 7
+local beat_count = 8
 
 beats.advance_step = function(in_beatstep)
   beatstep = in_beatstep
@@ -29,13 +32,13 @@ beats.advance_step = function(in_beatstep)
   if(math.random(100) < stutter_probability) then
     message = "STUTTER"
     stutter_amount = math.random(4)
-    softcut.loop_start(1, index * (duration / 8.0))
-    softcut.loop_end(1, index * (duration / 8.0) + (duration / (64.0 / stutter_amount)))
+    softcut.loop_start(1, index * (duration / beat_count))
+    softcut.loop_end(1, index * (duration / beat_count) + (duration / (64.0 / stutter_amount)))
   else
     softcut.loop_start(1,0)
     softcut.loop_end(1,duration)
   end
-  softcut.position(1, index * (duration / 8.0))
+  softcut.position(1, index * (duration / beat_count))
 
   if(math.random(100) < reverse_probability) then
     message = message .. " REVERSE"
@@ -44,7 +47,10 @@ beats.advance_step = function(in_beatstep)
     softcut.rate(1, rate)
   end
 
-  index = (index + 1) % 8
+  index = index + 1
+  if index > beat_end then
+    index = beat_start
+  end
 
   if(math.random(100) < jump_probability) then
     message = message .. " JUMP"
@@ -144,6 +150,26 @@ beats.add_params = function()
     controlspec = specs.FILTER_RESONANCE,
     action = function(value)
       softcut.post_filter_rq(1, value)
+    end}
+
+  params:add{type = "number",
+    id = "beat_start",
+    name = "Beat Start",
+    min = 0,
+    max = beat_count - 1,
+    default = 0,
+    action = function(value)
+      beat_start = value
+    end}
+
+  params:add{type = "number",
+    id = "beat_end",
+    name = "Beat End",
+    min = 0,
+    max = beat_count - 1,
+    default = beat_count - 1,
+    action = function(value)
+      beat_end = value
     end}
 end
 
