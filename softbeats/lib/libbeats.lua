@@ -12,25 +12,22 @@ local frames
 local duration
 local rate
 local index = 0
-local message1 = "..."
-local message2 = "..."
-local message3 = "..."
+local message = "..."
 local beatstep = 0
 local stutter_probability = 0
 local reverse_probability = 0
 local jump_probability = 0
 local jump_back_probability = 0
 
-beats.advance_step = function(beat_clock)
+beats.advance_step = function(in_beatstep)
+  beatstep = in_beatstep
   crow.output[1]()
   if beatstep == 1 then
     crow.output[2]()
   end
-  beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
-  message2 = "Index " .. index
-  message3 = ""
+  message = ""
   if(math.random(100) < stutter_probability) then
-    message3 = "STUTTER"
+    message = "STUTTER"
     stutter_amount = math.random(4)
     softcut.loop_start(1, index * (duration / 8.0))
     softcut.loop_end(1, index * (duration / 8.0) + (duration / (64.0 / stutter_amount)))
@@ -41,7 +38,7 @@ beats.advance_step = function(beat_clock)
   softcut.position(1, index * (duration / 8.0))
 
   if(math.random(100) < reverse_probability) then
-    message3 = message3 .. " REVERSE"
+    message = message .. " REVERSE"
     softcut.rate(1, 0-rate)
   else
     softcut.rate(1, rate)
@@ -50,17 +47,17 @@ beats.advance_step = function(beat_clock)
   index = (index + 1) % 8
 
   if(math.random(100) < jump_probability) then
-    message3 = message3 .. "JUMP"
+    message = message .. "JUMP"
     index = (index + 1) % 8
   end
 
   if(math.random(100) < jump_back_probability) then
-    message3 = message3 .. "JUMP BACK"
+    message = message .. "JUMP BACK"
     index = (index - 1) % 8
   end
 
   if(beatstep == 0) then
-    message3 = message3 .. "RESET"
+    message = message .. "RESET"
     index = 0
   end
   redraw()
@@ -74,7 +71,7 @@ local function redraw()
   screen.move(10 + 10 * index, 30)
   screen.text("|")
   screen.move(10, 40)
-  screen.text(message3)
+  screen.text(message)
   screen.update()
 end
 
