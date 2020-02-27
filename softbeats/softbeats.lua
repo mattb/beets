@@ -9,16 +9,16 @@ function init_beatclock(bpm)
   beat_clock.steps_per_beat = 2
   beat_clock.on_select_internal = function() beat_clock:start() end
   beat_clock.on_select_external = function() print("external") end
-  beat_clock:add_clock_params()
   beat_clock:start()
   beat_clock:bpm_change(bpm)
+  beat_clock:add_clock_params()
 
   local clk_midi = midi.connect(1)
   clk_midi.event = beat_clock.process_mid
 
   beat_clock.on_step = function() 
     local beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
-    beats.advance_step(beatstep)
+    beats.advance_step(beatstep, beat_clock.bpm)
   end
 end
 
@@ -31,7 +31,10 @@ function init()
   audio.comp_off()
 
   local file = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav"
-  beats.init(file)
+  local bpm = 120
+
+  beats.init(file, bpm)
   beats.add_params()
-  init_beatclock(120)
+
+  init_beatclock(bpm)
 end

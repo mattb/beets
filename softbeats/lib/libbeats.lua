@@ -21,8 +21,10 @@ local jump_back_probability = 0
 local beat_start = 0
 local beat_end = 7
 local beat_count = 8
+local initial_bpm = 0
 
-beats.advance_step = function(in_beatstep)
+beats.advance_step = function(in_beatstep, in_bpm)
+  local current_rate = rate * (in_bpm / initial_bpm)
   beatstep = in_beatstep
   crow.output[1]()
   if beatstep == 1 then
@@ -42,9 +44,9 @@ beats.advance_step = function(in_beatstep)
 
   if(math.random(100) < reverse_probability) then
     message = message .. " REVERSE"
-    softcut.rate(1, 0-rate)
+    softcut.rate(1, 0-current_rate)
   else
-    softcut.rate(1, rate)
+    softcut.rate(1, current_rate)
   end
 
   index = index + 1
@@ -69,7 +71,8 @@ beats.advance_step = function(in_beatstep)
   redraw()
 end
 
-beats.init = function(file)
+beats.init = function(file, bpm)
+  initial_bpm = bpm
   local ch, samples, samplerate = audio.file_info(file)
   frames = samples
   rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
