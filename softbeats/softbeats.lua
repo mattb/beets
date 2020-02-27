@@ -22,6 +22,10 @@ function init_beatclock(bpm)
   end
 end
 
+function redraw()
+  beats:redraw()
+end
+
 function init()
   audio.rev_off()
   audio.comp_off()

@@ -19,18 +19,6 @@ local reverse_probability = 0
 local jump_probability = 0
 local jump_back_probability = 0
 
-local function redraw()
-  screen.clear()
-  screen.level(15)
-  screen.move(10 + 10 * beatstep, 20)
-  screen.text("|")
-  screen.move(10 + 10 * index, 30)
-  screen.text("|")
-  screen.move(10, 40)
-  screen.text(message)
-  screen.update()
-end
-
 beats.advance_step = function(in_beatstep)
   beatstep = in_beatstep
   crow.output[1]()
@@ -69,7 +57,7 @@ beats.advance_step = function(in_beatstep)
   end
 
   if(beatstep == 0) then
-    message = message .. "RESET"
+    message = message .. " RESET"
     index = 0
   end
   redraw()
@@ -157,6 +145,18 @@ beats.add_params = function()
     action = function(value)
       softcut.post_filter_rq(1, value)
     end}
+end
+
+function beats:redraw()
+  screen.clear()
+  screen.level(15)
+  screen.move(10 + 10 * beatstep, 20)
+  screen.text("|")
+  screen.move(10 + 10 * index, 30)
+  screen.text("|")
+  screen.move(10, 40)
+  screen.text(message)
+  screen.update()
 end
 
 return beats
