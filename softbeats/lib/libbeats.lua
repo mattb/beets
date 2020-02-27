@@ -60,7 +60,7 @@ beats.advance_step = function(in_beatstep)
     message = message .. "RESET"
     index = 0
   end
-  redraw()
+  beats.redraw()
 end
 
 local function redraw()
