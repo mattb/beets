@@ -19,6 +19,18 @@ local reverse_probability = 0
 local jump_probability = 0
 local jump_back_probability = 0
 
+local function redraw()
+  screen.clear()
+  screen.level(15)
+  screen.move(10 + 10 * beatstep, 20)
+  screen.text("|")
+  screen.move(10 + 10 * index, 30)
+  screen.text("|")
+  screen.move(10, 40)
+  screen.text(message)
+  screen.update()
+end
+
 beats.advance_step = function(in_beatstep)
   beatstep = in_beatstep
   crow.output[1]()
@@ -47,12 +59,12 @@ beats.advance_step = function(in_beatstep)
   index = (index + 1) % 8
 
   if(math.random(100) < jump_probability) then
-    message = message .. "JUMP"
+    message = message .. " JUMP"
     index = (index + 1) % 8
   end
 
   if(math.random(100) < jump_back_probability) then
-    message = message .. "JUMP BACK"
+    message = message .. " JUMP BACK"
     index = (index - 1) % 8
   end
 
@@ -60,19 +72,7 @@ beats.advance_step = function(in_beatstep)
     message = message .. "RESET"
     index = 0
   end
-  beats.redraw()
-end
-
-local function redraw()
-  screen.clear()
-  screen.level(15)
-  screen.move(10 + 10 * beatstep, 20)
-  screen.text("|")
-  screen.move(10 + 10 * index, 30)
-  screen.text("|")
-  screen.move(10, 40)
-  screen.text(message)
-  screen.update()
+  redraw()
 end
 
 beats.init = function(file)
