@@ -29,7 +29,7 @@ local kickbeats = {}
 
 local specs = {}
 specs.FILTER_FREQ = ControlSpec.new(0, 20000, "exp", 0, 20000, "Hz")
-specs.FILTER_RESONANCE = ControlSpec.new(0, 1, "lin", 0, 0.25, "")
+specs.FILTER_RESONANCE = ControlSpec.new(0.05, 1, "lin", 0, 0.25, "")
 specs.PERCENTAGE = ControlSpec.new(0, 1, "lin", 0.01, 0, "%")
 specs.BEAT_START = ControlSpec.new(0, beat_count - 1, "lin", 1, 0, "")
 specs.BEAT_END = ControlSpec.new(0, beat_count - 1, "lin", 1, beat_count - 1, "")
@@ -42,11 +42,11 @@ beats.advance_step = function(in_beatstep, in_bpm)
   beats.play_slice(index)
   index = beats.calculate_next_slice(index)
   redraw()
-}
+end
 
-beats.play_slice = function(slice_index) {
+beats.play_slice = function(slice_index) 
   crow.output[1]()
-  if beatstep == 1 then
+  if beatstep == 0 then
     crow.output[2]()
   end
 
@@ -74,9 +74,9 @@ beats.play_slice = function(slice_index) {
   end
 
   softcut.position(1, slice_index * (duration / beat_count))
-}
+end
 
-beats.calculate_next_slice = function(current_index) {
+beats.calculate_next_slice = function(current_index) 
   local new_index = current_index + 1
   if new_index > beat_end then
     message = message .. " LOOP"
@@ -179,7 +179,8 @@ beats.add_params = function()
     controlspec = specs.FILTER_FREQ,
     formatter = Formatters.format_freq,
     action = function(value)
-      softcut.post_filter_fc(1, value)
+      -- TODO: seems to be crashing the audio engine right now
+      -- softcut.post_filter_fc(1, value) 
     end}
 
   params:add{type = "control", 
