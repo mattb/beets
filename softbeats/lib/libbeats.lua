@@ -1,3 +1,10 @@
+-- TODO:
+--
+-- load multiple breaks - lay them out on the softcut tape at fixed intervals (e.g. 10 seconds) to make the position calculation easy
+-- switch between breaks explicitly
+-- random probability of switching between breaks (RESET resets to explicit choice)
+-- highpass filter - requires intelligently switching the wet/dry mix of HP and LP based on which one is in use, or having a priority override
+
 local beats = {}
 
 local ControlSpec = require "controlspec"
@@ -17,6 +24,7 @@ local beat_start = 0
 local beat_end = 7
 local beat_count = 8
 local initial_bpm = 0
+local current_bpm = 0
 local kickbeats = {}
 
 local specs = {}
@@ -28,31 +36,36 @@ specs.BEAT_END = ControlSpec.new(0, beat_count - 1, "lin", 1, beat_count - 1, ""
 
 beats.advance_step = function(in_beatstep, in_bpm)
   message = ""
-
-  local current_rate = rate * (in_bpm / initial_bpm)
   beatstep = in_beatstep
+  current_bpm = in_bpm
+
+  beats.play_slice(index)
+  index = beats.calculate_next_slice(index)
+  redraw()
+}
+
+beats.play_slice = function(slice_index) {
   crow.output[1]()
   if beatstep == 1 then
     crow.output[2]()
   end
 
+  if kickbeats[slice_index] == 1 then
+    crow.output[3]()
+    message = message .. " KICK"
+  end
+
   if(math.random(100) < stutter_probability) then
     message = message .. " STUTTER"
     stutter_amount = math.random(4)
-    softcut.loop_start(1, index * (duration / beat_count))
-    softcut.loop_end(1, index * (duration / beat_count) + (duration / (64.0 / stutter_amount)))
+    softcut.loop_start(1, slice_index * (duration / beat_count))
+    softcut.loop_end(1, slice_index * (duration / beat_count) + (duration / (64.0 / stutter_amount)))
   else
     softcut.loop_start(1,0)
     softcut.loop_end(1,duration)
   end
 
-  if kickbeats[index] == 1 then
-    crow.output[3]()
-    message = message .. " KICK"
-  end
-
-  softcut.position(1, index * (duration / beat_count))
-
+  local current_rate = rate * (current_bpm / initial_bpm)
   if(math.random(100) < reverse_probability) then
     message = message .. " REVERSE"
     softcut.rate(1, 0-current_rate)
@@ -60,28 +73,31 @@ beats.advance_step = function(in_beatstep, in_bpm)
     softcut.rate(1, current_rate)
   end
 
-  index = index + 1
-  if index > beat_end then
+  softcut.position(1, slice_index * (duration / beat_count))
+}
+
+beats.calculate_next_slice = function(current_index) {
+  local new_index = current_index + 1
+  if new_index > beat_end then
     message = message .. " LOOP"
-    index = beat_start
+    new_index = beat_start
   end
 
   if(math.random(100) < jump_probability) then
     message = message .. " JUMP"
-    index = (index + 1) % 8
+    new_index = (new_index + 1) % beat_count
   end
 
   if(math.random(100) < jump_back_probability) then
     message = message .. " JUMP BACK"
-    index = (index - 1) % 8
+    new_index = (new_index - 1) % beat_count
   end
 
   if(beatstep == beat_count - 1) then
     message = message .. " RESET"
-    index = beat_start
+    new_index = beat_start
   end
-
-  redraw()
+  return new_index
 end
 
 beats.init = function(in_file, in_bpm, in_kickbeats)
