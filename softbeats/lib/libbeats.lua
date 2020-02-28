@@ -26,6 +26,9 @@ local beat_count = 8
 local initial_bpm = 0
 local current_bpm = 0
 local kickbeats = {}
+local break_index = 1
+local break_offset = 5
+local break_count = 0
 
 local specs = {}
 specs.FILTER_FREQ = ControlSpec.new(0, 20000, "exp", 0, 20000, "Hz")
@@ -50,7 +53,7 @@ beats.play_slice = function(slice_index)
     crow.output[2]()
   end
 
-  if kickbeats[slice_index] == 1 then
+  if kickbeats[break_index][slice_index] == 1 then
     crow.output[3]()
     message = message .. " KICK"
   end
@@ -58,11 +61,11 @@ beats.play_slice = function(slice_index)
   if(math.random(100) < stutter_probability) then
     message = message .. " STUTTER"
     stutter_amount = math.random(4)
-    softcut.loop_start(1, slice_index * (duration / beat_count))
-    softcut.loop_end(1, slice_index * (duration / beat_count) + (duration / (64.0 / stutter_amount)))
+    softcut.loop_start(1, break_index * break_offset + (slice_index * (duration / beat_count)))
+    softcut.loop_end(1, break_index * break_offset + (slice_index * (duration / beat_count) + (duration / (64.0 / stutter_amount))))
   else
-    softcut.loop_start(1,0)
-    softcut.loop_end(1,duration)
+    softcut.loop_start(1, break_index * break_offset)
+    softcut.loop_end(1, break_index * break_offset + duration)
   end
 
   local current_rate = rate * (current_bpm / initial_bpm)
@@ -73,7 +76,7 @@ beats.play_slice = function(slice_index)
     softcut.rate(1, current_rate)
   end
 
-  softcut.position(1, slice_index * (duration / beat_count))
+  softcut.position(1, break_index * break_offset + (slice_index * (duration / beat_count)))
 end
 
 beats.calculate_next_slice = function(current_index) 
@@ -100,11 +103,8 @@ beats.calculate_next_slice = function(current_index)
   return new_index
 end
 
-beats.init = function(in_file, in_bpm, in_kickbeats)
+beats.init = function(breaks, in_bpm)
   kickbeats = {}
-  for i, beat in ipairs(in_kickbeats) do
-    kickbeats[beat] = 1
-  end
 
   initial_bpm = in_bpm
   local ch, samples, samplerate = audio.file_info(in_file)
@@ -113,15 +113,22 @@ beats.init = function(in_file, in_bpm, in_kickbeats)
   duration = samples / 48000.0
   print("Frames: " .. frames .. " Rate: " .. rate .. " Duration: " .. duration)
 
-  softcut.buffer_read_mono(in_file,0,0,-1,1,1)
+  for i, brk in ipairs(breaks) do
+    softcut.buffer_read_mono(brk.file, 0, i * break_offset, -1, 1, 1)
+    kickbeats[i] = {}
+    for i, beat in ipairs(brk.kicks) do
+      kickbeats[i][beat] = 1
+    end
+    break_count = i
+  end
   
   softcut.enable(1,1)
   softcut.buffer(1,1)
   softcut.level(1,0.1)
   softcut.loop(1,1)
-  softcut.loop_start(1,0)
-  softcut.loop_end(1,duration)
-  softcut.position(1,0)
+  softcut.loop_start(1, break_index * break_offset)
+  softcut.loop_end(1, break_index * break_offset + duration)
+  softcut.position(1, break_index * break_offset)
   softcut.rate(1,rate)
   softcut.play(1,1)
   softcut.fade_time(1, 0.005)
@@ -137,6 +144,14 @@ beats.init = function(in_file, in_bpm, in_kickbeats)
 end
 
 beats.add_params = function()
+  params:add{type = "control", 
+    id = "break_index",
+    name="Sample",
+    controlspec = ControlSpec.new(1, break_count, "lin", 1, 1, ""),
+    action = function(value)
+      break_index = value
+    end}
+
   params:add{type = "control", 
     id = "jump_back_probability",
     name="Jump Back Probability",

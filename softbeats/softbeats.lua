@@ -30,13 +30,52 @@ function init()
   audio.rev_off()
   audio.comp_off()
 
-  local file = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav"
   local bpm = 120
 
-  -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
-  local kicks = { 0, 3, 5, 7 }
+  breaks = {
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav",
+      kicks = { 0, 3, 5, 7 } -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_1.wav",
+      kicks = { 0, 1, 5 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_2.wav",
+      kicks = { 0, 3, 7 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_4.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_5.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_6.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_7.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_8.wav",
+      kicks = { 0 }
+    },
+    { 
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_9.wav",
+      kicks = { 0 }
+    }
+  }
 
-  beats.init(file, bpm, kicks)
+  beats.init(breaks, bpm)
   beats.add_params()
 
   init_beatclock(bpm)
