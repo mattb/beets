@@ -2,6 +2,7 @@
 --
 -- random probability of switching between breaks (RESET resets to explicit choice)
 -- highpass filter - requires intelligently switching the wet/dry mix of HP and LP based on which one is in use, or having a priority override
+-- quantized + vactrol-style-fade muting - e.g. E2 hold-to-mute E3 toggle mute
 
 local beats = {}
 
