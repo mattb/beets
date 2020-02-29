@@ -16,6 +16,7 @@ local rate
 local index = 0
 local message = "..."
 local beatstep = 0
+
 local stutter_probability = 0
 local reverse_probability = 0
 local jump_probability = 0
@@ -23,6 +24,8 @@ local jump_back_probability = 0
 local beat_start = 0
 local beat_end = 7
 local beat_count = 8
+
+local muted = false
 local initial_bpm = 0
 local current_bpm = 0
 local kickbeats = {}
@@ -45,6 +48,27 @@ beats.advance_step = function(in_beatstep, in_bpm)
   beats.play_slice(index)
   index = beats.calculate_next_slice(index)
   redraw()
+end
+
+beats.instant_mute = function(in_muted)
+  beats.mute(in_muted)
+  if muted then
+    softcut.level(1,0)
+  else
+    softcut.level(1,1)
+  end
+end
+
+beats.mute = function(in_muted)
+  if in_muted then
+    muted = true
+  else
+    muted = false
+  end
+end
+
+beats.toggle_mute = function()
+  beats.mute(not muted)
 end
 
 beats.play_slice = function(slice_index) 
@@ -74,6 +98,12 @@ beats.play_slice = function(slice_index)
     softcut.rate(1, 0-current_rate)
   else
     softcut.rate(1, current_rate)
+  end
+
+  if muted then
+    softcut.level(1,0)
+  else
+    softcut.level(1,1)
   end
 
   softcut.position(1, break_index * break_offset + (slice_index * (duration / beat_count)))
@@ -117,7 +147,7 @@ beats.init = function(breaks, in_bpm)
   for i, brk in ipairs(breaks) do
     softcut.buffer_read_mono(brk.file, 0, i * break_offset, -1, 1, 1)
     kickbeats[i] = {}
-    for i, beat in ipairs(brk.kicks) do
+    for _, beat in ipairs(brk.kicks) do
       kickbeats[i][beat] = 1
     end
     break_count = i
@@ -125,7 +155,8 @@ beats.init = function(breaks, in_bpm)
   
   softcut.enable(1,1)
   softcut.buffer(1,1)
-  softcut.level(1,0.1)
+  softcut.level(1,1)
+  softcut.level_slew_time(1, 0.2)
   softcut.loop(1,1)
   softcut.loop_start(1, break_index * break_offset)
   softcut.loop_end(1, break_index * break_offset + duration)

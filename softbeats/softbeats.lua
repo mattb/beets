@@ -26,6 +26,18 @@ function redraw()
   beats:redraw()
 end
 
+function key(n, z)
+  if n == 2 and z == 0 then
+    beats.toggle_mute()
+  end
+  if n == 3 and z == 1 then
+    beats.instant_mute(true)
+  end
+  if n == 3 and z == 0 then
+    beats.instant_mute(false)
+  end
+end
+
 function init()
   audio.rev_off()
   audio.comp_off()
