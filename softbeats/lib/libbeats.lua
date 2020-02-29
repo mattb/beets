@@ -17,6 +17,7 @@ local message = ""
 local status = ""
 local beatstep = 0
 
+local break_index_probability = 0
 local stutter_probability = 0
 local reverse_probability = 0
 local jump_probability = 0
@@ -34,7 +35,7 @@ local break_offset = 5
 local break_count = 0
 
 local specs = {}
-specs.FILTER_FREQ = ControlSpec.new(0, 20000, "exp", 0, 20000, "Hz")
+specs.FILTER_FREQ = ControlSpec.new(20, 20000, "exp", 0, 20000, "Hz")
 specs.FILTER_RESONANCE = ControlSpec.new(0.05, 1, "lin", 0, 0.25, "")
 specs.PERCENTAGE = ControlSpec.new(0, 1, "lin", 0.01, 0, "%")
 specs.BEAT_START = ControlSpec.new(0, beat_count - 1, "lin", 1, 0, "")
@@ -79,11 +80,6 @@ beats.play_slice = function(slice_index)
     crow.output[2]()
   end
 
-  if kickbeats[break_index][slice_index] == 1 then
-    crow.output[3]()
-    message = message .. "KICK "
-  end
-
   if(math.random(100) < stutter_probability) then
     message = message .. "STUTTER "
     stutter_amount = math.random(4)
@@ -108,11 +104,23 @@ beats.play_slice = function(slice_index)
     softcut.level(1,1)
   end
 
-  softcut.position(1, break_index * break_offset + (slice_index * (duration / beat_count)))
+  local played_break_index
+  if(math.random(100) < break_index_probability) then
+    played_break_index = math.random(8) - 1
+    message = message .. "BREAK "
+  else
+    played_break_index = break_index
+  end
+  softcut.position(1, played_break_index * break_offset + (slice_index * (duration / beat_count)))
   if muted then
     status = status .. "MUTED "
   end
-  status = status .. "Sample: " .. break_index
+  status = status .. "Sample: " .. played_break_index
+
+  if kickbeats[played_break_index][slice_index] == 1 then
+    crow.output[3]()
+    message = message .. "KICK "
+  end
 end
 
 beats.calculate_next_slice = function(current_index) 
@@ -227,17 +235,25 @@ beats.add_params = function()
     end}
 
   params:add{type = "control", 
-    id = "filter_freq",
+    id = "break_index_probability",
+    name="Break Index Probability",
+    controlspec = specs.PERCENTAGE,
+    formatter = Formatters.percentage,
+    action = function(value)
+      break_index_probability = value * 100
+    end}
+
+  params:add{type = "control", 
+    id = "filter_frequency",
     name="Filter Cutoff",
     controlspec = specs.FILTER_FREQ,
     formatter = Formatters.format_freq,
     action = function(value)
-      -- TODO: seems to be crashing the audio engine right now
-      -- softcut.post_filter_fc(1, value) 
+      softcut.post_filter_fc(1, value) 
     end}
 
   params:add{type = "control", 
-    id = "filter_res",
+    id = "filter_reso",
     name="Filter Resonance",
     controlspec = specs.FILTER_RESONANCE,
     action = function(value)
