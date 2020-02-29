@@ -14,7 +14,9 @@ local frames
 local duration
 local rate
 local index = 0
-local message = "..."
+local played_index = 0
+local message = ""
+local status = ""
 local beatstep = 0
 
 local stutter_probability = 0
@@ -46,6 +48,7 @@ beats.advance_step = function(in_beatstep, in_bpm)
   current_bpm = in_bpm
 
   beats.play_slice(index)
+  played_index = index
   index = beats.calculate_next_slice(index)
   redraw()
 end
@@ -79,11 +82,11 @@ beats.play_slice = function(slice_index)
 
   if kickbeats[break_index][slice_index] == 1 then
     crow.output[3]()
-    message = message .. " KICK"
+    message = message .. "KICK "
   end
 
   if(math.random(100) < stutter_probability) then
-    message = message .. " STUTTER"
+    message = message .. "STUTTER "
     stutter_amount = math.random(4)
     softcut.loop_start(1, break_index * break_offset + (slice_index * (duration / beat_count)))
     softcut.loop_end(1, break_index * break_offset + (slice_index * (duration / beat_count) + (duration / (64.0 / stutter_amount))))
@@ -94,7 +97,7 @@ beats.play_slice = function(slice_index)
 
   local current_rate = rate * (current_bpm / initial_bpm)
   if(math.random(100) < reverse_probability) then
-    message = message .. " REVERSE"
+    message = message .. "REVERSE "
     softcut.rate(1, 0-current_rate)
   else
     softcut.rate(1, current_rate)
@@ -107,27 +110,32 @@ beats.play_slice = function(slice_index)
   end
 
   softcut.position(1, break_index * break_offset + (slice_index * (duration / beat_count)))
+  status = ""
+  if muted then
+    status = status .. "MUTED "
+  end
+  status = status .. "Sample: " .. break_index
 end
 
 beats.calculate_next_slice = function(current_index) 
   local new_index = current_index + 1
   if new_index > beat_end then
-    message = message .. " LOOP"
+    message = message .. "LOOP "
     new_index = beat_start
   end
 
   if(math.random(100) < jump_probability) then
-    message = message .. " JUMP"
+    message = message .. "JUMP "
     new_index = (new_index + 1) % beat_count
   end
 
   if(math.random(100) < jump_back_probability) then
-    message = message .. " JUMP BACK"
+    message = message .. "JUMP BACK "
     new_index = (new_index - 1) % beat_count
   end
 
   if(beatstep == beat_count - 1) then
-    message = message .. " RESET"
+    message = message .. "RESET "
     new_index = beat_start
   end
   return new_index
@@ -256,14 +264,24 @@ beats.add_params = function()
 end
 
 function beats:redraw()
+  local horiz_spacing = 4
+  local left_margin = 10
   screen.clear()
   screen.level(15)
-  screen.move(10 + 10 * beatstep, 20)
+  for i = 0,7 do 
+    screen.move(left_margin + horiz_spacing * i, 17)
+    screen.text("-")
+    screen.move(left_margin + horiz_spacing * i, 23)
+    screen.text("-")
+  end
+  screen.move(left_margin + 1 + horiz_spacing * beatstep, 20)
   screen.text("|")
-  screen.move(10 + 10 * index, 20)
+  screen.move(left_margin + horiz_spacing * played_index, 20)
   screen.text("-")
-  screen.move(10, 40)
+  screen.move(left_margin, 40)
   screen.text(message)
+  screen.move(left_margin, 50)
+  screen.text(status)
   screen.update()
 end
 

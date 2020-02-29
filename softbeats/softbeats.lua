@@ -1,3 +1,12 @@
+-- Beets
+-- 0.1 @mattb
+--
+-- Probabilistic performance 
+-- drum loop resequencer
+-- 
+-- E2 : Quantized mute toggle
+-- E3 : Instant mute while held 
+
 local beats = include('lib/libbeats')
 local BeatClock = require "beatclock"
 
