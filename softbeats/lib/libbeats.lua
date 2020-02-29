@@ -42,6 +42,7 @@ specs.BEAT_END = ControlSpec.new(0, beat_count - 1, "lin", 1, beat_count - 1, ""
 
 beats.advance_step = function(in_beatstep, in_bpm)
   message = ""
+  status = ""
   beatstep = in_beatstep
   current_bpm = in_bpm
 
@@ -108,7 +109,6 @@ beats.play_slice = function(slice_index)
   end
 
   softcut.position(1, break_index * break_offset + (slice_index * (duration / beat_count)))
-  status = ""
   if muted then
     status = status .. "MUTED "
   end
@@ -118,22 +118,22 @@ end
 beats.calculate_next_slice = function(current_index) 
   local new_index = current_index + 1
   if new_index > beat_end then
-    message = message .. "LOOP "
+    -- message = message .. "LOOP "
     new_index = beat_start
   end
 
   if(math.random(100) < jump_probability) then
-    message = message .. "JUMP "
+    message = message .. "> "
     new_index = (new_index + 1) % beat_count
   end
 
   if(math.random(100) < jump_back_probability) then
-    message = message .. "JUMP BACK "
+    message = message .. "< "
     new_index = (new_index - 1) % beat_count
   end
 
   if(beatstep == beat_count - 1) then
-    message = message .. "RESET "
+    -- message = message .. "RESET "
     new_index = beat_start
   end
   return new_index
@@ -169,7 +169,7 @@ beats.init = function(breaks, in_bpm)
   softcut.position(1, break_index * break_offset)
   softcut.rate(1,rate)
   softcut.play(1,1)
-  softcut.fade_time(1, 0.005)
+  softcut.fade_time(1, 0.010)
 
   softcut.post_filter_dry(1,0.0)
   softcut.post_filter_lp(1,1.0)
@@ -271,6 +271,10 @@ function beats:redraw()
     screen.text("-")
     screen.move(left_margin + horiz_spacing * i, 23)
     screen.text("-")
+    if i == beat_start or i == beat_end then 
+      screen.move(left_margin + horiz_spacing * i, 26)
+      screen.text("^")
+    end
   end
   screen.move(left_margin + 1 + horiz_spacing * beatstep, 20)
   screen.text("|")
