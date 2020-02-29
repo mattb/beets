@@ -52,47 +52,50 @@ function init()
   audio.comp_off()
 
   local bpm = 120
-
-  breaks = {
-    { 
-      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav",
-      kicks = { 0, 3, 5, 7 } -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
-    },
+  
+  unused_breaks = {
     { 
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_1.wav",
       kicks = { 0, 1, 5 }
     },
-    { 
+    {
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav",
+      kicks = { 0, 3, 5 }
+    }
+  }
+
+  breaks = {
+    { -- 1
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_2.wav",
       kicks = { 0, 3, 7 }
     },
-    { 
-      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav",
-      kicks = { 0 }
-    },
-    { 
-      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_4.wav",
-      kicks = { 0 }
-    },
-    { 
-      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_5.wav",
-      kicks = { 0 }
-    },
-    { 
+    { -- 2
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_6.wav",
-      kicks = { 0 }
+      kicks = { 0, 4  }
     },
-    { 
+    { -- 3
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_7.wav",
       kicks = { 0 }
     },
-    { 
-      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_8.wav",
-      kicks = { 0 }
-    },
-    { 
+    { -- 4
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_9.wav",
-      kicks = { 0 }
+      kicks = { 0, 3, 5 }
+    },
+    { -- 5
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_5.wav",
+      kicks = { 0, 5  }
+    },
+    { -- 6
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_4.wav",
+      kicks = { 0, 3, 5 }
+    },
+    { -- 7
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_8.wav",
+      kicks = { 0, 5 }
+    },
+    { -- 8
+      file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav",
+      kicks = { 0, 3, 5, 7 } -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
     }
   }
 
