@@ -1,7 +1,5 @@
 -- TODO:
 --
--- load multiple breaks - lay them out on the softcut tape at fixed intervals (e.g. 10 seconds) to make the position calculation easy
--- switch between breaks explicitly
 -- random probability of switching between breaks (RESET resets to explicit choice)
 -- highpass filter - requires intelligently switching the wet/dry mix of HP and LP based on which one is in use, or having a priority override
 
