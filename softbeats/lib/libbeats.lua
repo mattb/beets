@@ -107,7 +107,8 @@ beats.init = function(breaks, in_bpm)
   kickbeats = {}
 
   initial_bpm = in_bpm
-  local ch, samples, samplerate = audio.file_info(in_file)
+  local first_file = breaks[1].file
+  local ch, samples, samplerate = audio.file_info(first_file) -- take all the settings from the first file for now
   frames = samples
   rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
   duration = samples / 48000.0
