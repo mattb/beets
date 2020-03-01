@@ -41,11 +41,8 @@ function key(n, z)
   if n == 2 and z == 0 then
     beets:toggle_mute()
   end
-  if n == 3 and z == 1 then
-    beets:instant_mute(true)
-  end
-  if n == 3 and z == 0 then
-    beets:instant_mute(false)
+  if n == 3 then
+    beets:instant_toggle_mute()
   end
 end
 

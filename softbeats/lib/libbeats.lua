@@ -53,8 +53,8 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self:calculate_next_slice()
 end
 
-function Beets:instant_mute(in_muted)
-  self:mute(in_muted)
+function Beets:instant_toggle_mute()
+  self:toggle_mute()
   if self.muted then
     softcut.level(self.id,0)
   else
