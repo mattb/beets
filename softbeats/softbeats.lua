@@ -7,10 +7,11 @@
 -- E2 : Quantized mute toggle
 -- E3 : Instant mute while held 
 
-local beats = include('lib/libbeats')
 local BeatClock = require "beatclock"
+local Beets = include('lib/libbeats')
 
 local beat_clock
+local beets = Beets.new(1)
 
 function init_beatclock(bpm)
   beat_clock = BeatClock.new()
@@ -27,23 +28,24 @@ function init_beatclock(bpm)
 
   beat_clock.on_step = function() 
     local beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
-    beats.advance_step(beatstep, beat_clock.bpm)
+    beets:advance_step(beatstep, beat_clock.bpm)
+    redraw()
   end
 end
 
 function redraw()
-  beats:redraw()
+  beets:drawUI()
 end
 
 function key(n, z)
   if n == 2 and z == 0 then
-    beats.toggle_mute()
+    beets:toggle_mute()
   end
   if n == 3 and z == 1 then
-    beats.instant_mute(true)
+    beets:instant_mute(true)
   end
   if n == 3 and z == 0 then
-    beats.instant_mute(false)
+    beets:instant_mute(false)
   end
 end
 
@@ -95,12 +97,12 @@ function init()
     },
     { -- 8
       file  = _path.dust .. "audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav",
-      kicks = { 0, 3, 5, 7 } -- list of which beats contain kicks, so that a Crow trigger can fire every time they hit
+      kicks = { 0, 3, 5, 7 } -- list of which beets contain kicks, so that a Crow trigger can fire every time they hit
     }
   }
 
-  beats.init(breaks, bpm)
-  beats.add_params()
+  beets:init(breaks, bpm)
+  beets:add_params()
 
   init_beatclock(bpm)
 end
