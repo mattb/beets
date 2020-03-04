@@ -8,7 +8,7 @@
 -- E3 : Instant mute while held 
 
 local BeatClock = require "beatclock"
-local Beets = include('lib/libbeats')
+local Beets = include('lib/libbeets')
 
 local beat_clock
 local beets = Beets.new(1)
