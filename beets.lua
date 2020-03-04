@@ -4,8 +4,8 @@
 -- Probabilistic performance 
 -- drum loop resequencer
 -- 
--- E2 : Quantized mute toggle
--- E3 : Instant mute while held 
+-- K2 : Quantized mute toggle
+-- K3 : Instant mute while held 
 
 local BeatClock = require "beatclock"
 local Beets = include('lib/libbeets')
