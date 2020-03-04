@@ -6,34 +6,40 @@
 local Beets = {}
 Beets.__index = Beets
 
+local BREAK_OFFSET = 5
+
 function Beets.new(softcut_voice_id)
   local i = {
+    -- descriptive global state
     id=softcut_voice_id,
     frames = 0,
     duration = 0,
     rate = 0,
+    beat_count = 8,
+    initial_bpm = 0,
+    kickbeats = {},
+    break_count = 0,
+
+    -- state that changes on the beat
+    beatstep = 0,
     index = 0,
     played_index = 0,
     message = "",
     status = "",
-    beatstep = 0,
-
-    break_index_probability = 0,
-    stutter_probability = 0,
-    reverse_probability = 0,
-    jump_probability = 0,
-    jump_back_probability = 0,
+    muted = false,
+    current_bpm = 0,
     beat_start = 0,
     beat_end = 7,
-    beat_count = 8,
-
-    muted = false,
-    initial_bpm = 0,
-    current_bpm = 0,
-    kickbeats = {},
     break_index = 1,
-    break_offset = 5,
-    break_count = 0
+
+    -- probability values
+    probability = {
+      break_index_jump = 0,
+      stutter = 0,
+      reverse = 0,
+      jump = 0,
+      jump_back = 0
+    }
   }
 
   setmetatable(i, Beets)
@@ -74,24 +80,28 @@ function Beets:toggle_mute()
   self:mute(not self.muted)
 end
 
+function Beets:should(thing)
+  return math.random(100) <= self.probability[thing]
+end
+
 function Beets:play_slice(slice_index) 
   crow.output[1]()
   if self.beatstep == 0 then
     crow.output[2]()
   end
 
-  if(math.random(100) < self.stutter_probability) then
+  if(self:should("stutter")) then
     self.message = self.message .. "STUTTER "
     local stutter_amount = math.random(4)
-    softcut.loop_start(self.id, self.break_index * self.break_offset + (slice_index * (self.duration / self.beat_count)))
-    softcut.loop_end(self.id, self.break_index * self.break_offset + (slice_index * (self.duration / self.beat_count) + (self.duration / (64.0 / stutter_amount))))
+    softcut.loop_start(self.id, self.break_index * BREAK_OFFSET + (slice_index * (self.duration / self.beat_count)))
+    softcut.loop_end(self.id, self.break_index * BREAK_OFFSET + (slice_index * (self.duration / self.beat_count) + (self.duration / (64.0 / stutter_amount))))
   else
-    softcut.loop_start(self.id, self.break_index * self.break_offset)
-    softcut.loop_end(self.id, self.break_index * self.break_offset + self.duration)
+    softcut.loop_start(self.id, self.break_index * BREAK_OFFSET)
+    softcut.loop_end(self.id, self.break_index * BREAK_OFFSET + self.duration)
   end
 
   local current_rate = self.rate * (self.current_bpm / self.initial_bpm)
-  if(math.random(100) < self.reverse_probability) then
+  if(self:should("reverse")) then
     self.message = self.message .. "REVERSE "
     softcut.rate(self.id, 0-current_rate)
   else
@@ -105,13 +115,13 @@ function Beets:play_slice(slice_index)
   end
 
   local played_break_index
-  if(math.random(100) < self.break_index_probability) then
+  if(self:should("break_index_jump")) then
     played_break_index = math.random(8) - 1
     self.message = self.message .. "BREAK "
   else
     played_break_index = self.break_index
   end
-  softcut.position(self.id, played_break_index * self.break_offset + (slice_index * (self.duration / self.beat_count)))
+  softcut.position(self.id, played_break_index * BREAK_OFFSET + (slice_index * (self.duration / self.beat_count)))
   if self.muted then
     self.status = self.status .. "MUTED "
   end
@@ -130,12 +140,12 @@ function Beets:calculate_next_slice()
     new_index = self.beat_start
   end
 
-  if(math.random(100) < self.jump_probability) then
+  if(self:should("jump")) then
     self.message = self.message .. "> "
     new_index = (new_index + 1) % self.beat_count
   end
 
-  if(math.random(100) < self.jump_back_probability) then
+  if(self:should("jump_back")) then
     self.message = self.message .. "< "
     new_index = (new_index - 1) % self.beat_count
   end
@@ -159,7 +169,7 @@ function Beets:init(breaks, in_bpm)
   print("Frames: " .. self.frames .. " Rate: " .. self.rate .. " Duration: " .. self.duration)
 
   for i, brk in ipairs(breaks) do
-    softcut.buffer_read_mono(brk.file, 0, i * self.break_offset, -1, 1, 1)
+    softcut.buffer_read_mono(brk.file, 0, i * BREAK_OFFSET, -1, 1, 1)
     self.kickbeats[i] = {}
     for _, beat in ipairs(brk.kicks) do
       self.kickbeats[i][beat] = 1
@@ -172,9 +182,9 @@ function Beets:init(breaks, in_bpm)
   softcut.level(self.id,1)
   softcut.level_slew_time(self.id, 0.2)
   softcut.loop(self.id,1)
-  softcut.loop_start(self.id, self.break_index * self.break_offset)
-  softcut.loop_end(self.id, self.break_index * self.break_offset + self.duration)
-  softcut.position(self.id, self.break_index * self.break_offset)
+  softcut.loop_start(self.id, self.break_index * BREAK_OFFSET)
+  softcut.loop_end(self.id, self.break_index * BREAK_OFFSET + self.duration)
+  softcut.position(self.id, self.break_index * BREAK_OFFSET)
   softcut.rate(self.id,self.rate)
   softcut.play(self.id,1)
   softcut.fade_time(self.id, 0.010)
@@ -214,7 +224,7 @@ function Beets:add_params()
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.jump_back_probability = value * 100
+      self.probability.jump_back = value * 100
     end}
 
   params:add{type = "control", 
@@ -223,7 +233,7 @@ function Beets:add_params()
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.jump_probability = value * 100
+      self.probability.jump = value * 100
     end}
 
   params:add{type = "control", 
@@ -232,7 +242,7 @@ function Beets:add_params()
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.reverse_probability = value * 100
+      self.probability.reverse = value * 100
     end}
 
   params:add{type = "control", 
@@ -241,16 +251,16 @@ function Beets:add_params()
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.stutter_probability = value * 100
+      self.probability.stutter = value * 100
     end}
 
   params:add{type = "control", 
-    id = "break_index_probability",
-    name="Break Index Probability",
+    id = "break_index_jump_probability",
+    name="Break Index Jump Probability",
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.break_index_probability = value * 100
+      self.probability.break_index_jump = value * 100
     end}
 
   params:add{type = "control", 
