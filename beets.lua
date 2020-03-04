@@ -13,6 +13,8 @@ local Beets = include('lib/libbeets')
 local beat_clock
 local beets = Beets.new(1)
 
+local editing = false
+
 function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
@@ -37,12 +39,35 @@ function redraw()
   beets:drawUI()
 end
 
-function key(n, z)
-  if n == 2 and z == 0 then
-    beets:toggle_mute()
+function enc(n, d)
+  if editing then
+    beets:enc(n, d)
   end
-  if n == 3 then
-    beets:instant_toggle_mute()
+end
+
+function key(n, z)
+  if n == 1 and z == 1 then
+    editing = true
+    beets:edit_mode_begin()
+  end
+  if editing then
+    if n == 1 and z == 0 then
+      editing = false
+      beets:edit_mode_end()
+    else
+      beets:key(n, z)
+    end
+  else
+    if n == 1 and z == 1 then
+      editing = true
+      beets:show_edit_screen()
+    end
+    if n == 2 and z == 0 then
+      beets:toggle_mute()
+    end
+    if n == 3 then
+      beets:instant_toggle_mute()
+    end
   end
 end
 

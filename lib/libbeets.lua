@@ -19,6 +19,7 @@ function Beets.new(softcut_voice_id)
     initial_bpm = 0,
     kickbeats = {},
     break_count = 0,
+    editing = false,
 
     -- state that changes on the beat
     beatstep = 0,
@@ -298,29 +299,55 @@ function Beets:add_params()
 end
 
 function Beets:drawUI()
-  local horiz_spacing = 4
-  local left_margin = 10
   screen.clear()
   screen.level(15)
-  for i = 0,7 do 
-    screen.move(left_margin + horiz_spacing * i, 17)
-    screen.text("-")
-    screen.move(left_margin + horiz_spacing * i, 23)
-    screen.text("-")
-    if i == self.beat_start or i == self.beat_end then 
-      screen.move(left_margin + horiz_spacing * i, 26)
-      screen.text("^")
+  
+  if self.editing then
+    screen.move(10, 10)
+    screen.text("EDIT MODE")
+  else
+    local horiz_spacing = 4
+    local left_margin = 10
+    screen.clear()
+    screen.level(15)
+    for i = 0,7 do 
+      screen.move(left_margin + horiz_spacing * i, 17)
+      screen.text("-")
+      screen.move(left_margin + horiz_spacing * i, 23)
+      screen.text("-")
+      if i == self.beat_start or i == self.beat_end then 
+	screen.move(left_margin + horiz_spacing * i, 26)
+	screen.text("^")
+      end
     end
+    screen.move(left_margin + 1 + horiz_spacing * self.beatstep, 20)
+    screen.text("|")
+    screen.move(left_margin + horiz_spacing * self.played_index, 20)
+    screen.text("-")
+    screen.move(left_margin, 40)
+    screen.text(self.message)
+    screen.move(left_margin, 50)
+    screen.text(self.status)
   end
-  screen.move(left_margin + 1 + horiz_spacing * self.beatstep, 20)
-  screen.text("|")
-  screen.move(left_margin + horiz_spacing * self.played_index, 20)
-  screen.text("-")
-  screen.move(left_margin, 40)
-  screen.text(self.message)
-  screen.move(left_margin, 50)
-  screen.text(self.status)
   screen.update()
+end
+
+function Beets:edit_mode_begin()
+  self.editing = true
+  redraw()
+end
+
+function Beets:edit_mode_end()
+  self.editing = false
+  redraw()
+end
+
+function Beets:enc(n, d)
+  print("Enc " .. n .. " " .. d)
+end
+
+function Beets:key(n, z)
+  print("Key " .. n .. " " .. z)
 end
 
 return Beets
