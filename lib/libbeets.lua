@@ -129,7 +129,7 @@ function Beets:play_slice(slice_index)
   end
   self.status = self.status .. "Sample: " .. played_break_index
 
-  local curent_loop_filename = self.loops[played_break_index]
+  local current_loop_filename = self.loops[played_break_index]
   self:notify_beat(self.beat_types[current_loop_filename][slice_index])
 end
 
