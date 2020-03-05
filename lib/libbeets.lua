@@ -17,7 +17,8 @@ function Beets.new(softcut_voice_id)
     rate = 0,
     beat_count = 8,
     initial_bpm = 0,
-    kickbeats = {},
+    beat_types = {},
+    loops = {},
     break_count = 0,
     editing = false,
 
@@ -128,9 +129,20 @@ function Beets:play_slice(slice_index)
   end
   self.status = self.status .. "Sample: " .. played_break_index
 
-  if self.kickbeats[played_break_index][slice_index] == 1 then
+  local curent_loop_filename = self.loops[played_break_index]
+  self:notify_beat(self.beat_types[current_loop_filename][slice_index])
+end
+
+function Beets:notify_beat(beat_type)
+  if beat_type == "K" then
     crow.output[3]()
     self.message = self.message .. "KICK "
+  end
+  if beat_type == "S" then
+    self.message = self.message .. "SNARE "
+  end
+  if beat_type == "H" then
+    self.message = self.message .. "HAT "
   end
 end
 
@@ -159,7 +171,7 @@ function Beets:calculate_next_slice()
 end
 
 function Beets:init(breaks, in_bpm)
-  self.kickbeats = {}
+  self.beat_types = {}
 
   self.initial_bpm = in_bpm
   local first_file = breaks[1].file
@@ -171,9 +183,10 @@ function Beets:init(breaks, in_bpm)
 
   for i, brk in ipairs(breaks) do
     softcut.buffer_read_mono(brk.file, 0, i * BREAK_OFFSET, -1, 1, 1)
-    self.kickbeats[i] = {}
+    self.loops[i] = brk.file
+    self.beat_types[brk.file] = {}
     for _, beat in ipairs(brk.kicks) do
-      self.kickbeats[i][beat] = 1
+      self.beat_types[brk.file][beat] = "K"
     end
     self.break_count = i
   end
