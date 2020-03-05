@@ -312,24 +312,30 @@ function Beets:add_params()
 end
 
 function Beets:drawPlaybackUI()
-  local horiz_spacing = 4
+  local horiz_spacing = 10
+  local vert_spacing = 10
   local left_margin = 10
   screen.clear()
   screen.level(15)
   for i = 0,7 do 
-    screen.move(left_margin + horiz_spacing * i, 17)
-    screen.text("-")
-    screen.move(left_margin + horiz_spacing * i, 23)
-    screen.text("-")
+    screen.rect(left_margin + horiz_spacing * i, 17, 
+                horiz_spacing, vert_spacing)
+    if self.beatstep == i then
+      screen.level(4)
+      screen.fill()
+    end
+    screen.level(2)
+    screen.stroke()
+
+    screen.level(15)
     if i == self.beat_start or i == self.beat_end then 
-  screen.move(left_margin + horiz_spacing * i, 26)
-  screen.text("^")
+      screen.move(left_margin + horiz_spacing * i, 26)
+      screen.text("^")
     end
   end
-  screen.move(left_margin + 1 + horiz_spacing * self.beatstep, 20)
-  screen.text("|")
   screen.move(left_margin + horiz_spacing * self.played_index, 20)
-  screen.text("-")
+  screen.text("+")
+
   screen.move(left_margin, 40)
   screen.text(self.message)
   screen.move(left_margin, 50)
