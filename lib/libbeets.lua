@@ -298,36 +298,44 @@ function Beets:add_params()
     end}
 end
 
+function Beets:drawPlaybackUI()
+  local horiz_spacing = 4
+  local left_margin = 10
+  screen.clear()
+  screen.level(15)
+  for i = 0,7 do 
+    screen.move(left_margin + horiz_spacing * i, 17)
+    screen.text("-")
+    screen.move(left_margin + horiz_spacing * i, 23)
+    screen.text("-")
+    if i == self.beat_start or i == self.beat_end then 
+  screen.move(left_margin + horiz_spacing * i, 26)
+  screen.text("^")
+    end
+  end
+  screen.move(left_margin + 1 + horiz_spacing * self.beatstep, 20)
+  screen.text("|")
+  screen.move(left_margin + horiz_spacing * self.played_index, 20)
+  screen.text("-")
+  screen.move(left_margin, 40)
+  screen.text(self.message)
+  screen.move(left_margin, 50)
+  screen.text(self.status)
+end
+
+function Beets:drawEditingUI()
+  screen.move(10, 10)
+  screen.text("EDIT MODE")
+end
+
 function Beets:drawUI()
   screen.clear()
   screen.level(15)
   
   if self.editing then
-    screen.move(10, 10)
-    screen.text("EDIT MODE")
+    self:drawEditingUI()
   else
-    local horiz_spacing = 4
-    local left_margin = 10
-    screen.clear()
-    screen.level(15)
-    for i = 0,7 do 
-      screen.move(left_margin + horiz_spacing * i, 17)
-      screen.text("-")
-      screen.move(left_margin + horiz_spacing * i, 23)
-      screen.text("-")
-      if i == self.beat_start or i == self.beat_end then 
-	screen.move(left_margin + horiz_spacing * i, 26)
-	screen.text("^")
-      end
-    end
-    screen.move(left_margin + 1 + horiz_spacing * self.beatstep, 20)
-    screen.text("|")
-    screen.move(left_margin + horiz_spacing * self.played_index, 20)
-    screen.text("-")
-    screen.move(left_margin, 40)
-    screen.text(self.message)
-    screen.move(left_margin, 50)
-    screen.text(self.status)
+    self:drawPlaybackUI()
   end
   screen.update()
 end
