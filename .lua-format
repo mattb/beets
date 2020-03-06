@@ -1,0 +1,12 @@
+indent_width: 2
+tab_width: 2
+continuation_indent_width: 2
+column_limit: 92
+keep_simple_control_block_one_line: false
+keep_simple_function_one_line: false
+break_after_table_lb: false
+break_before_table_rb: false
+chop_down_table: true
+extra_sep_at_table_end: true
+break_after_operator: false
+double_quote_to_single_quote: true
