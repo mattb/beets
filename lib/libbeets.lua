@@ -217,7 +217,7 @@ function Beets:softcut_init()
   softcut.post_filter_fc(self.id, 44100)
 end
 
-function crow_init()
+function Beets:crow_init()
   crow.output[1].action = 'pulse(0.001, 5, 1)'
   crow.output[2].action = 'pulse(0.001, 5, 1)'
   crow.output[3].action = 'pulse(0.001, 5, 1)'
