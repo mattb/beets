@@ -12,7 +12,6 @@ function Beets.new(softcut_voice_id)
   local i = {
     -- descriptive global state
     id = softcut_voice_id,
-    frames = 0,
     duration = 0,
     rate = 0,
     beat_count = 8,
@@ -199,22 +198,7 @@ function Beets:load_loop(index, filename, kicks)
   f:close()
 end
 
-function Beets:init(breaks, in_bpm)
-  self.beat_types = {}
-
-  self.initial_bpm = in_bpm
-  local first_file = breaks[1].file
-  local ch, samples, samplerate = audio.file_info(first_file) -- take all the settings from the first file for now
-  self.frames = samples
-  self.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
-  self.duration = samples / 48000.0
-  print(
-    'Frames: ' .. self.frames .. ' Rate: ' .. self.rate .. ' Duration: ' .. self.duration)
-
-  for i, brk in ipairs(breaks) do
-    self:load_loop(i, brk.file, brk.kicks)
-  end
-
+function Beets:softcut_init()
   softcut.enable(self.id, 1)
   softcut.buffer(self.id, 1)
   softcut.level(self.id, 1)
@@ -231,6 +215,24 @@ function Beets:init(breaks, in_bpm)
   softcut.post_filter_lp(self.id, 1.0)
   softcut.post_filter_rq(self.id, 0.3)
   softcut.post_filter_fc(self.id, 44100)
+end
+
+function Beets:init(breaks, in_bpm)
+  self.beat_types = {}
+
+  self.initial_bpm = in_bpm
+  local first_file = breaks[1].file
+  local ch, samples, samplerate = audio.file_info(first_file) -- take all the settings from the first file for now
+  self.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
+  self.duration = samples / 48000.0
+  print(
+    'Frames: ' .. samples .. ' Rate: ' .. self.rate .. ' Duration: ' .. self.duration)
+
+  for i, brk in ipairs(breaks) do
+    self:load_loop(i, brk.file, brk.kicks)
+  end
+
+  self:softcut_init()
 
   crow.output[1].action = 'pulse(0.001, 5, 1)'
   crow.output[2].action = 'pulse(0.001, 5, 1)'
