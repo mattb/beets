@@ -80,6 +80,12 @@ function init()
 
   local bpm = 120
 
+  different_bpm_breaks = {
+    {file = _path.dust .. 'audio/breaks/BBB_110_BPM_PRO_BREAK_1.wav', kicks = {0}},
+    {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav', kicks = {0}},
+    {file = _path.dust .. 'audio/breaks/BBB_80_BPM_PRO_BREAK_10.wav', kicks = {0}}
+  }
+
   unused_breaks = {
     {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_1.wav', kicks = {0, 1, 5}},
     {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav', kicks = {0, 3, 5}},
