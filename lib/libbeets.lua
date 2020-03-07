@@ -354,25 +354,32 @@ function Beets:drawPlaybackUI()
   local horiz_spacing = 10
   local vert_spacing = 10
   local left_margin = 10
+  local top_margin = 17
   screen.clear()
   screen.level(15)
   for i = 0, 7 do
-    screen.rect(left_margin + horiz_spacing * i, 17, horiz_spacing, vert_spacing)
-    if self.beatstep == i then
+    screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
+    if self.played_index == i then
+      screen.level(15)
+    elseif self.beatstep == i then
       screen.level(4)
-      screen.fill()
+    else
+      screen.level(0)
     end
+    screen.fill()
+    screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
     screen.level(2)
     screen.stroke()
 
     screen.level(15)
-    if i == self.beat_start or i == self.beat_end then
-      screen.move(left_margin + horiz_spacing * i, 26)
-      screen.text('^')
-    end
   end
-  screen.move(left_margin + horiz_spacing * self.played_index, 20)
-  screen.text('+')
+
+  screen.level(6)
+  screen.move(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 2)
+  screen.line(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 6)
+  screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 6)
+  screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 2)
+  screen.stroke()
 
   screen.move(left_margin, 40)
   screen.text(self.message)
