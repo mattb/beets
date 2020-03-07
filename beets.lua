@@ -14,6 +14,14 @@ local beets = Beets.new(1)
 
 local editing = false
 
+function init_crow()
+  crow.output[1].action = 'pulse(0.001, 5, 1)'
+  crow.output[2].action = 'pulse(0.001, 5, 1)'
+  crow.output[3].action = 'pulse(0.001, 5, 1)'
+  crow.ii.pullup(true)
+end
+
+
 function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
@@ -132,8 +140,13 @@ function init()
     beets:load_loop(i, brk)
   end
 
+  beets.on_beat = function() crow.output[1]() end
+  beets.on_beat_one = function() crow.output[2]() end
+  beets.on_kick = function() crow.output[3]() end
+
   beets:add_params()
 
   init_beatclock(bpm)
+  init_crow()
   beets:start()
 end

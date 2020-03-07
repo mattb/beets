@@ -34,6 +34,11 @@ function Beets.new(softcut_voice_id)
     beat_end = 7,
     break_index = 1,
 
+    on_beat_one = function() end,
+    on_beat = function() end,
+    on_kick = function() end,
+    on_snare = function() end,
+
     -- probability values
     probability = {break_index_jump = 0, stutter = 0, reverse = 0, jump = 0, jump_back = 0},
   }
@@ -82,9 +87,9 @@ function Beets:should(thing)
 end
 
 function Beets:play_slice(slice_index)
-  crow.output[1]()
+  self.on_beat()
   if self.beatstep == 0 then
-    crow.output[2]()
+    self.on_beat_one()
   end
 
   local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
@@ -139,11 +144,10 @@ end
 
 function Beets:notify_beat(beat_type)
   if beat_type == 'K' then
-    crow.output[3]()
+    self.on_kick()
   end
   if beat_type == 'S' then
-  end
-  if beat_type == 'H' then
+    self.on_snare()
   end
 end
 
@@ -231,20 +235,12 @@ function Beets:softcut_init()
   softcut.post_filter_fc(self.id, 44100)
 end
 
-function Beets:crow_init()
-  crow.output[1].action = 'pulse(0.001, 5, 1)'
-  crow.output[2].action = 'pulse(0.001, 5, 1)'
-  crow.output[3].action = 'pulse(0.001, 5, 1)'
-  crow.ii.pullup(true)
-end
-
 function Beets:init(breaks, in_bpm)
   self.initial_bpm = in_bpm
 end
 
 function Beets:start()
   self:softcut_init()
-  self:crow_init()
 end
 
 function Beets:add_params()
