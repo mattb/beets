@@ -6,6 +6,7 @@ local Beets = {}
 Beets.__index = Beets
 
 local BREAK_OFFSET = 5
+local EVENT_ORDER = { "<", ">", "R", "S" }
 local json = include("lib/json")
 
 function Beets.new(softcut_voice_id)
@@ -26,6 +27,7 @@ function Beets.new(softcut_voice_id)
     played_index = 0,
     message = '',
     status = '',
+    events = {},
     muted = false,
     current_bpm = 0,
     beat_start = 0,
@@ -42,6 +44,7 @@ function Beets.new(softcut_voice_id)
 end
 
 function Beets:advance_step(in_beatstep, in_bpm)
+  self.events = {}
   self.message = ''
   self.status = ''
   self.beatstep = in_beatstep
@@ -87,7 +90,7 @@ function Beets:play_slice(slice_index)
   local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
 
   if (self:should('stutter')) then
-    self.message = self.message .. 'STUTTER '
+    self.events['S'] = 1
     local stutter_amount = math.random(4)
     softcut.loop_start(self.id, loop.start
                          + (slice_index * (loop.duration / self.beat_count)))
@@ -96,15 +99,17 @@ function Beets:play_slice(slice_index)
                        + (slice_index * (loop.duration / self.beat_count)
                          + (loop.duration / (64.0 / stutter_amount))))
   else
+    self.events['S'] = 0
     softcut.loop_start(self.id, loop.start)
     softcut.loop_end(self.id, loop.start + loop.duration)
   end
 
   local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
   if (self:should('reverse')) then
-    self.message = self.message .. 'REVERSE '
+    self.events['R'] = 1
     softcut.rate(self.id, 0 - current_rate)
   else
+    self.events['R'] = 0
     softcut.rate(self.id, current_rate)
   end
 
@@ -117,8 +122,9 @@ function Beets:play_slice(slice_index)
   local played_break_index
   if (self:should('break_index_jump')) then
     played_break_index = math.random(8) - 1
-    self.message = self.message .. 'BREAK '
+    self.events['B'] = 1
   else
+    self.events['B'] = 0
     played_break_index = self.break_index
   end
   softcut.position(self.id, loop.start
@@ -126,7 +132,7 @@ function Beets:play_slice(slice_index)
   if self.muted then
     self.status = self.status .. 'MUTED '
   end
-  self.status = self.status .. 'Sample: ' .. played_break_index
+  self.status = self.status .. played_break_index .. " "
 
   self:notify_beat(loop.beat_types[slice_index+1])
 end
@@ -134,35 +140,34 @@ end
 function Beets:notify_beat(beat_type)
   if beat_type == 'K' then
     crow.output[3]()
-    self.message = self.message .. 'KICK '
   end
   if beat_type == 'S' then
-    self.message = self.message .. 'SNARE '
   end
   if beat_type == 'H' then
-    self.message = self.message .. 'HAT '
   end
 end
 
 function Beets:calculate_next_slice()
   local new_index = self.index + 1
   if new_index > self.beat_end then
-    -- self.message = self.message .. "LOOP "
     new_index = self.beat_start
   end
 
   if (self:should('jump')) then
-    self.message = self.message .. '> '
+    self.events['>'] = 1
     new_index = (new_index + 1) % self.beat_count
+  else
+    self.events['>'] = 0
   end
 
   if (self:should('jump_back')) then
-    self.message = self.message .. '< '
+    self.events['<'] = 1
     new_index = (new_index - 1) % self.beat_count
+  else
+    self.events['<'] = 0
   end
 
   if (self.beatstep == self.beat_count - 1) then
-    -- message = message .. "RESET "
     new_index = self.beat_start
   end
   self.index = new_index
@@ -176,7 +181,7 @@ function Beets:load_loop(index, filename, kicks)
   loop_info.frames = samples
   loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
   loop_info.duration = samples / 48000.0
-  loop_info.beat_types = { "-", "-", "-", "-", "-", "-", "-", "-" }
+  loop_info.beat_types = { " ", " ", " ", " ", " ", " ", " ", " " }
   loop_info.filename = filename
   loop_info.start = index * BREAK_OFFSET
   loop_info.index = index
@@ -351,23 +356,31 @@ function Beets:add_params()
 end
 
 function Beets:drawPlaybackUI()
-  local horiz_spacing = 10
-  local vert_spacing = 10
+  local horiz_spacing = 9
+  local vert_spacing = 9
   local left_margin = 10
-  local top_margin = 17
+  local top_margin = 10
   screen.clear()
   screen.level(15)
+
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
+
   for i = 0, 7 do
     screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
     if self.played_index == i then
       screen.level(15)
     elseif self.beatstep == i then
-      screen.level(4)
+      screen.level(2)
     else
       screen.level(0)
     end
     screen.fill()
     screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
+
+    screen.level(1)
+    screen.move(left_margin + horiz_spacing * i + 2, top_margin + 6)
+    screen.text(loop.beat_types[i+1])
+
     screen.level(2)
     screen.stroke()
 
@@ -385,6 +398,16 @@ function Beets:drawPlaybackUI()
   screen.text(self.message)
   screen.move(left_margin, 50)
   screen.text(self.status)
+
+  for y, e in ipairs(EVENT_ORDER) do
+    screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin + vert_spacing * y)
+    if self.events[e] == 1 then
+      screen.level(15)
+    else
+      screen.level(1)
+    end
+    screen.text(e)
+  end
 end
 
 function Beets:drawEditingUI()
