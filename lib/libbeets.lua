@@ -12,13 +12,11 @@ function Beets.new(softcut_voice_id)
   local i = {
     -- descriptive global state
     id = softcut_voice_id,
-    duration = 0,
     rate = 0,
     beat_count = 8,
     initial_bpm = 0,
-    beat_types = {},
-    loops = {},
-    loop_info = {},
+    loops_by_filename = {},
+    loop_index_to_filename = {},
     break_count = 0,
     editing = false,
 
@@ -50,8 +48,8 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self.current_bpm = in_bpm
 
   self.played_index = self.index
-  self:play_slice(self.index)
 
+  self:play_slice(self.index)
   self:calculate_next_slice()
 end
 
@@ -86,21 +84,23 @@ function Beets:play_slice(slice_index)
     crow.output[2]()
   end
 
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
+
   if (self:should('stutter')) then
     self.message = self.message .. 'STUTTER '
     local stutter_amount = math.random(4)
-    softcut.loop_start(self.id, self.break_index * BREAK_OFFSET
-                         + (slice_index * (self.duration / self.beat_count)))
+    softcut.loop_start(self.id, loop.start
+                         + (slice_index * (loop.duration / self.beat_count)))
     softcut.loop_end(self.id,
-                     self.break_index * BREAK_OFFSET
-                       + (slice_index * (self.duration / self.beat_count)
-                         + (self.duration / (64.0 / stutter_amount))))
+                     loop.start
+                       + (slice_index * (loop.duration / self.beat_count)
+                         + (loop.duration / (64.0 / stutter_amount))))
   else
-    softcut.loop_start(self.id, self.break_index * BREAK_OFFSET)
-    softcut.loop_end(self.id, self.break_index * BREAK_OFFSET + self.duration)
+    softcut.loop_start(self.id, loop.start)
+    softcut.loop_end(self.id, loop.start + loop.duration)
   end
 
-  local current_rate = self.rate * (self.current_bpm / self.initial_bpm)
+  local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
   if (self:should('reverse')) then
     self.message = self.message .. 'REVERSE '
     softcut.rate(self.id, 0 - current_rate)
@@ -121,15 +121,14 @@ function Beets:play_slice(slice_index)
   else
     played_break_index = self.break_index
   end
-  softcut.position(self.id, played_break_index * BREAK_OFFSET
-                     + (slice_index * (self.duration / self.beat_count)))
+  softcut.position(self.id, loop.start
+                     + (slice_index * (loop.duration / self.beat_count)))
   if self.muted then
     self.status = self.status .. 'MUTED '
   end
   self.status = self.status .. 'Sample: ' .. played_break_index
 
-  local current_loop_filename = self.loops[played_break_index]
-  self:notify_beat(self.beat_types[current_loop_filename][slice_index])
+  self:notify_beat(loop.beat_types[slice_index+1])
 end
 
 function Beets:notify_beat(beat_type)
@@ -179,18 +178,17 @@ function Beets:load_loop(index, filename, kicks)
   loop_info.duration = samples / 48000.0
   loop_info.beat_types = { "-", "-", "-", "-", "-", "-", "-", "-" }
   loop_info.filename = filename
+  loop_info.start = index * BREAK_OFFSET
+  loop_info.index = index
 
-  softcut.buffer_read_mono(filename, 0, index * BREAK_OFFSET, -1, 1, 1)
-
-  self.loops[index] = filename
-  self.beat_types[filename] = {}
+  softcut.buffer_read_mono(filename, 0, loop_info.start, -1, 1, 1)
 
   for _, beat in ipairs(kicks) do
-    self.beat_types[filename][beat] = "K"
     loop_info.beat_types[beat + 1] = "K"
   end
 
-  self.loop_info[filename] = loop_info
+  self.loop_index_to_filename[index] = filename
+  self.loops_by_filename[filename] = loop_info
   self.break_count = index
 
   local f=io.open(filename .. ".json", "w")
@@ -204,10 +202,10 @@ function Beets:softcut_init()
   softcut.level(self.id, 1)
   softcut.level_slew_time(self.id, 0.2)
   softcut.loop(self.id, 1)
-  softcut.loop_start(self.id, self.break_index * BREAK_OFFSET)
-  softcut.loop_end(self.id, self.break_index * BREAK_OFFSET + self.duration)
-  softcut.position(self.id, self.break_index * BREAK_OFFSET)
-  softcut.rate(self.id, self.rate)
+  softcut.loop_start(self.id, 0)
+  softcut.loop_end(self.id, 0)
+  softcut.position(self.id, 0)
+  softcut.rate(self.id, 0)
   softcut.play(self.id, 1)
   softcut.fade_time(self.id, 0.010)
 
@@ -225,20 +223,10 @@ function Beets:crow_init()
 end
 
 function Beets:init(breaks, in_bpm)
-  self.beat_types = {}
-
   self.initial_bpm = in_bpm
-  local first_file = breaks[1].file
-  local ch, samples, samplerate = audio.file_info(first_file) -- take all the settings from the first file for now
-  self.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
-  self.duration = samples / 48000.0
-  print(
-    'Frames: ' .. samples .. ' Rate: ' .. self.rate .. ' Duration: ' .. self.duration)
+end
 
-  for i, brk in ipairs(breaks) do
-    self:load_loop(i, brk.file, brk.kicks)
-  end
-
+function Beets:start()
   self:softcut_init()
   self:crow_init()
 end

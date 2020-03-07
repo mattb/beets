@@ -121,7 +121,12 @@ function init()
   }
 
   beets:init(breaks, bpm)
+  for i, brk in ipairs(breaks) do
+    beets:load_loop(i, brk.file, brk.kicks)
+  end
+
   beets:add_params()
 
   init_beatclock(bpm)
+  beets:start()
 end
