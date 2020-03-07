@@ -13,7 +13,6 @@ function Beets.new(softcut_voice_id)
   local i = {
     -- descriptive global state
     id = softcut_voice_id,
-    rate = 0,
     beat_count = 8,
     initial_bpm = 0,
     loops_by_filename = {},
