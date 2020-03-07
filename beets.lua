@@ -95,6 +95,7 @@ function init()
     { -- 1
       file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_2.wav',
       kicks = {0, 3, 7},
+      snares = {2, 6}
     },
     { -- 2
       file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_6.wav',
@@ -128,7 +129,7 @@ function init()
 
   beets:init(breaks, bpm)
   for i, brk in ipairs(breaks) do
-    beets:load_loop(i, brk.file, brk.kicks)
+    beets:load_loop(i, brk)
   end
 
   beets:add_params()

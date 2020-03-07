@@ -174,7 +174,10 @@ function Beets:calculate_next_slice()
 end
 
 
-function Beets:load_loop(index, filename, kicks)
+function Beets:load_loop(index, loop)
+  local filename = loop.file
+  local kicks = loop.kicks
+  local snares = loop.snares
   local loop_info = {}
 
   local ch, samples, samplerate = audio.file_info(filename)
@@ -188,8 +191,16 @@ function Beets:load_loop(index, filename, kicks)
 
   softcut.buffer_read_mono(filename, 0, loop_info.start, -1, 1, 1)
 
-  for _, beat in ipairs(kicks) do
-    loop_info.beat_types[beat + 1] = "K"
+  if kicks then
+    for _, beat in ipairs(kicks) do
+      loop_info.beat_types[beat + 1] = "K"
+    end
+  end
+
+  if snares then
+    for _, beat in ipairs(snares) do
+      loop_info.beat_types[beat + 1] = "S"
+    end
   end
 
   self.loop_index_to_filename[index] = filename
