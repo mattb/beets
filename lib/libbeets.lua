@@ -6,6 +6,7 @@ local Beets = {}
 Beets.__index = Beets
 
 local BREAK_OFFSET = 5
+local json = include("lib/json")
 
 function Beets.new(softcut_voice_id)
   local i = {
@@ -18,6 +19,7 @@ function Beets.new(softcut_voice_id)
     initial_bpm = 0,
     beat_types = {},
     loops = {},
+    loop_info = {},
     break_count = 0,
     editing = false,
 
@@ -168,6 +170,35 @@ function Beets:calculate_next_slice()
   self.index = new_index
 end
 
+
+function Beets:load_loop(index, filename, kicks)
+  local loop_info = {}
+
+  local ch, samples, samplerate = audio.file_info(filename)
+  loop_info.frames = samples
+  loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
+  loop_info.duration = samples / 48000.0
+  loop_info.beat_types = { "-", "-", "-", "-", "-", "-", "-", "-" }
+  loop_info.filename = filename
+
+  softcut.buffer_read_mono(filename, 0, index * BREAK_OFFSET, -1, 1, 1)
+
+  self.loops[index] = filename
+  self.beat_types[filename] = {}
+
+  for _, beat in ipairs(kicks) do
+    self.beat_types[filename][beat] = "K"
+    loop_info.beat_types[beat + 1] = "K"
+  end
+
+  self.loop_info[filename] = loop_info
+  self.break_count = index
+
+  local f=io.open(filename .. ".json", "w")
+  f:write(json.encode(loop_info))
+  f:close()
+end
+
 function Beets:init(breaks, in_bpm)
   self.beat_types = {}
 
@@ -181,13 +212,7 @@ function Beets:init(breaks, in_bpm)
     'Frames: ' .. self.frames .. ' Rate: ' .. self.rate .. ' Duration: ' .. self.duration)
 
   for i, brk in ipairs(breaks) do
-    softcut.buffer_read_mono(brk.file, 0, i * BREAK_OFFSET, -1, 1, 1)
-    self.loops[i] = brk.file
-    self.beat_types[brk.file] = {}
-    for _, beat in ipairs(brk.kicks) do
-      self.beat_types[brk.file][beat] = 'K'
-    end
-    self.break_count = i
+    self:load_loop(i, brk.file, brk.kicks)
   end
 
   softcut.enable(self.id, 1)
