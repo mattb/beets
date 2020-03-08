@@ -12,12 +12,14 @@ local json = include("lib/json")
 function Beets.new(softcut_voice_id)
   local i = {
     -- descriptive global state
+    running = false,
+    enable_mutations = true,
     id = softcut_voice_id,
     beat_count = 8,
     initial_bpm = 0,
     loops_by_filename = {},
     loop_index_to_filename = {},
-    break_count = 0,
+    loop_count = 0,
     editing = false,
 
     -- state that changes on the beat
@@ -31,7 +33,7 @@ function Beets.new(softcut_voice_id)
     current_bpm = 0,
     beat_start = 0,
     beat_end = 7,
-    break_index = 1,
+    loop_index = 1,
 
     on_beat_one = function() end,
     on_beat = function() end,
@@ -39,7 +41,7 @@ function Beets.new(softcut_voice_id)
     on_snare = function() end,
 
     -- probability values
-    probability = {break_index_jump = 0, stutter = 0, reverse = 0, jump = 0, jump_back = 0},
+    probability = {loop_index_jump = 0, stutter = 0, reverse = 0, jump = 0, jump_back = 0},
   }
 
   setmetatable(i, Beets)
@@ -55,6 +57,16 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self.current_bpm = in_bpm
 
   self.played_index = self.index
+
+  if not running then
+    self.status = 'NOT RUNNING'
+    return
+  end
+
+  if self.loop_count == 0 then
+    self.status = 'NO LOOPS'
+    return
+  end
 
   self:play_slice(self.index)
   self:calculate_next_slice()
@@ -82,6 +94,9 @@ function Beets:toggle_mute()
 end
 
 function Beets:should(thing)
+  if not self.enable_mutations then
+    return false
+  end
   return math.random(100) <= self.probability[thing]
 end
 
@@ -91,7 +106,9 @@ function Beets:play_slice(slice_index)
     self.on_beat_one()
   end
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
+  local played_loop_index
 
   if (self:should('stutter')) then
     self.events['S'] = 1
@@ -108,7 +125,6 @@ function Beets:play_slice(slice_index)
     softcut.loop_end(self.id, loop.start + loop.duration)
   end
 
-  local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
   if (self:should('reverse')) then
     self.events['R'] = 1
     softcut.rate(self.id, 0 - current_rate)
@@ -123,20 +139,21 @@ function Beets:play_slice(slice_index)
     softcut.level(self.id, 1)
   end
 
-  local played_break_index
-  if (self:should('break_index_jump')) then
-    played_break_index = math.random(8) - 1
+  if (self:should('loop_index_jump')) then
+    played_loop_index = math.random(8) - 1
     self.events['B'] = 1
   else
     self.events['B'] = 0
-    played_break_index = self.break_index
+    played_loop_index = self.loop_index
   end
+
   softcut.position(self.id, loop.start
                      + (slice_index * (loop.duration / self.beat_count)))
+
   if self.muted then
     self.status = self.status .. 'MUTED '
   end
-  self.status = self.status .. played_break_index .. " "
+  self.status = self.status .. played_loop_index .. " "
 
   self:notify_beat(loop.beat_types[slice_index+1])
 end
@@ -176,6 +193,11 @@ function Beets:calculate_next_slice()
   self.index = new_index
 end
 
+function Beets:clear_loops()
+  self.loop_index_to_filename[index] = {}
+  self.loops_by_filename[filename] = {}
+  self.loop_count = 0
+end
 
 function Beets:load_loop(index, loop)
   local filename = loop.file
@@ -208,7 +230,7 @@ function Beets:load_loop(index, loop)
 
   self.loop_index_to_filename[index] = filename
   self.loops_by_filename[filename] = loop_info
-  self.break_count = index
+  self.loop_count = index
 
   local f=io.open(filename .. ".json", "w")
   f:write(json.encode(loop_info))
@@ -234,12 +256,15 @@ function Beets:softcut_init()
   softcut.post_filter_fc(self.id, 44100)
 end
 
-function Beets:init(breaks, in_bpm)
+function Beets:start(in_bpm)
   self.initial_bpm = in_bpm
+  self:softcut_init()
+  self.running = true
 end
 
-function Beets:start()
-  self:softcut_init()
+function Beets:stop()
+  self.running = false
+  softcut.play(self.id, 0)
 end
 
 function Beets:add_params()
@@ -256,11 +281,11 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'break_index',
+    id = 'loop_index',
     name = 'Sample',
-    controlspec = ControlSpec.new(1, self.break_count, 'lin', 1, 1, ''),
+    controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
     action = function(value)
-      self.break_index = value
+      self.loop_index = value
     end,
   }
 
@@ -310,12 +335,12 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'break_index_jump_probability',
+    id = 'loop_index_jump_probability',
     name = 'Break Index Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
-      self.probability.break_index_jump = value * 100
+      self.probability.loop_index_jump = value * 100
     end,
   }
 
@@ -369,7 +394,7 @@ function Beets:drawPlaybackUI()
   screen.clear()
   screen.level(15)
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.break_index]]
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
 
   for i = 0, 7 do
     screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
