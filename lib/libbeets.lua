@@ -231,6 +231,7 @@ function Beets:load_loop(index, loop)
   self.loop_index_to_filename[index] = filename
   self.loops_by_filename[filename] = loop_info
   self.loop_count = index
+  self:reset_loop_index_param()
 
   local f=io.open(filename .. ".json", "w")
   f:write(json.encode(loop_info))
@@ -265,6 +266,14 @@ end
 function Beets:stop()
   self.running = false
   softcut.play(self.id, 0)
+end
+
+function Beets:reset_loop_index_param()
+  for _, p in ipairs(params.params) do
+    if p.id == 'loop_index' then
+      p.controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
+    end
+  end
 end
 
 function Beets:add_params()
