@@ -29,6 +29,7 @@ function Beets.new(softcut_voice_id)
     beatstep = 0,
     index = 0,
     played_index = 0,
+    played_loop_index = 0,
     message = '',
     status = '',
     events = {},
@@ -110,15 +111,15 @@ function Beets:play_slice(slice_index)
     self.on_beat_one()
   end
 
-  local played_loop_index = self.loop_index
+  self.played_loop_index = self.loop_index
   if (self:should('loop_index_jump')) then
-    played_loop_index = math.random(self.loop_count)
+    self.played_loop_index = math.random(self.loop_count)
     self.events['B'] = 1
   else
     self.events['B'] = 0
   end
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[played_loop_index]]
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.played_loop_index]]
   local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
 
   if (self:should('stutter')) then
@@ -154,9 +155,8 @@ function Beets:play_slice(slice_index)
                      + (slice_index * (loop.duration / self.beat_count)))
 
   if self.muted then
-    self.status = self.status .. 'MUTED '
+    self.status = 'MUTED'
   end
-  self.status = self.status .. played_loop_index .. " "
 
   self:notify_beat(loop.beat_types[slice_index+1])
 end
@@ -507,6 +507,9 @@ function Beets:drawPlaybackUI()
     screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 2)
     screen.stroke()
 
+    screen.level(15)
+    screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin)
+    screen.text(self.played_loop_index)
     for y, e in ipairs(EVENT_ORDER) do
       screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin + vert_spacing * y)
       if self.events[e] == 1 then
