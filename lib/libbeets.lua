@@ -9,7 +9,7 @@ local ControlSpec = require 'controlspec'
 local Formatters = require 'formatters'
 
 local BREAK_OFFSET = 5
-local EVENT_ORDER = { "<", ">", "R", "S" }
+local EVENT_ORDER = { "<", ">", "R", "S", "B" }
 local json = include("lib/json")
 
 function Beets.new(softcut_voice_id)
@@ -110,9 +110,16 @@ function Beets:play_slice(slice_index)
     self.on_beat_one()
   end
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  local played_loop_index = self.loop_index
+  if (self:should('loop_index_jump')) then
+    played_loop_index = math.random(self.loop_count)
+    self.events['B'] = 1
+  else
+    self.events['B'] = 0
+  end
+
+  local loop = self.loops_by_filename[self.loop_index_to_filename[played_loop_index]]
   local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
-  local played_loop_index
 
   if (self:should('stutter')) then
     self.events['S'] = 1
@@ -141,14 +148,6 @@ function Beets:play_slice(slice_index)
     softcut.level(self.id, 0)
   else
     softcut.level(self.id, 1)
-  end
-
-  if (self:should('loop_index_jump')) then
-    played_loop_index = math.random(self.loop_count) - 1
-    self.events['B'] = 1
-  else
-    self.events['B'] = 0
-    played_loop_index = self.loop_index
   end
 
   softcut.position(self.id, loop.start
