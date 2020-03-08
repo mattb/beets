@@ -5,6 +5,9 @@
 local Beets = {}
 Beets.__index = Beets
 
+local ControlSpec = require 'controlspec'
+local Formatters = require 'formatters'
+
 local BREAK_OFFSET = 5
 local EVENT_ORDER = { "<", ">", "R", "S" }
 local json = include("lib/json")
@@ -277,9 +280,6 @@ function Beets:reset_loop_index_param()
 end
 
 function Beets:add_params()
-  local ControlSpec = require 'controlspec'
-  local Formatters = require 'formatters'
-
   local specs = {}
   specs.FILTER_FREQ = ControlSpec.new(20, 20000, 'exp', 0, 20000, 'Hz')
   specs.FILTER_RESONANCE = ControlSpec.new(0.05, 1, 'lin', 0, 0.25, '')
