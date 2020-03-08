@@ -19,7 +19,7 @@ function Beets.new(softcut_voice_id)
     enable_mutations = true,
     id = softcut_voice_id,
     beat_count = 8,
-    initial_bpm = 0,
+    initial_bpm = 130,
     loops_by_filename = {},
     loop_index_to_filename = {},
     loop_count = 0,
@@ -42,6 +42,7 @@ function Beets.new(softcut_voice_id)
     on_beat = function() end,
     on_kick = function() end,
     on_snare = function() end,
+    change_bpm = function() end,
 
     -- probability values
     probability = {loop_index_jump = 0, stutter = 0, reverse = 0, jump = 0, jump_back = 0},
@@ -143,7 +144,7 @@ function Beets:play_slice(slice_index)
   end
 
   if (self:should('loop_index_jump')) then
-    played_loop_index = math.random(8) - 1
+    played_loop_index = math.random(self.loop_count) - 1
     self.events['B'] = 1
   else
     self.events['B'] = 0
@@ -197,9 +198,27 @@ function Beets:calculate_next_slice()
 end
 
 function Beets:clear_loops()
-  self.loop_index_to_filename[index] = {}
-  self.loops_by_filename[filename] = {}
+  self.loop_index_to_filename = {}
+  self.loops_by_filename = {}
   self.loop_count = 0
+end
+
+function Beets:load_directory(path, bpm)
+  self:clear_loops()
+  self.initial_bpm = bpm
+  self.change_bpm(bpm)
+
+  f = io.popen('ls ' .. path .. "/*.wav")
+  filenames={}
+  for name in f:lines() do 
+    table.insert(filenames, name)
+  end
+  table.sort(filenames)
+
+  for i, name in ipairs(filenames) do
+    self:load_loop(i,{ file=name })
+    i=i+1
+  end
 end
 
 function Beets:load_loop(index, loop)
@@ -287,6 +306,60 @@ function Beets:add_params()
   specs.BEAT_START = ControlSpec.new(0, self.beat_count - 1, 'lin', 1, 0, '')
   specs.BEAT_END =
     ControlSpec.new(0, self.beat_count - 1, 'lin', 1, self.beat_count - 1, '')
+
+  local files = {}
+  local files_count = 0
+  local loops_dir = _path.dust .. 'audio/beets/'
+  f = io.popen('cd ' .. loops_dir .. "; ls -d *")
+  for name in f:lines() do 
+    table.insert(files, name)
+    files_count = files_count + 1
+  end
+  table.sort(files)
+
+  if files_count == 0 then
+    name = 'Create folders in audio/beets to load'
+    self.loops_folder_name = "-"
+  else
+    name = 'Loops folder'
+    self.loops_folder_name = files[1]
+  end
+
+  params:add{
+    type = 'option',
+    id = 'dir_chooser',
+    name = name,
+    options = files,
+    action = function(value)
+      self.loops_folder_name = files[value]
+    end
+  }
+
+  params:add{
+    type = 'number',
+    id = 'dir_bpm',
+    name = 'Loops BPM',
+    min = 1,
+    max = 300,
+    default = self.initial_bpm,
+    action = function(value)
+      self.initial_bpm = value
+    end
+  }
+
+  params:add{
+    type = 'trigger',
+    id = 'load_loops',
+    name = 'Load loops',
+    action = function(value)
+      if value == "-" then
+	return
+      end
+      self:load_directory(_path.dust .. 'audio/beets/' .. self.loops_folder_name, self.initial_bpm)
+    end
+  }
+
+  params:add_separator()
 
   params:add{
     type = 'control',
@@ -403,51 +476,54 @@ function Beets:drawPlaybackUI()
   screen.clear()
   screen.level(15)
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  if self.loop_count > 0 then
+    local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
 
-  for i = 0, 7 do
-    screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
-    if self.played_index == i then
-      screen.level(15)
-    elseif self.beatstep == i then
+    for i = 0, 7 do
+      screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
+      if self.played_index == i then
+        screen.level(15)
+      elseif self.beatstep == i then
+        screen.level(2)
+      else
+        screen.level(0)
+      end
+      screen.fill()
+      screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
+
+      screen.level(1)
+      screen.move(left_margin + horiz_spacing * i + 2, top_margin + 6)
+      screen.text(loop.beat_types[i+1])
+
       screen.level(2)
-    else
-      screen.level(0)
+      screen.stroke()
+
+      screen.level(15)
     end
-    screen.fill()
-    screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
 
-    screen.level(1)
-    screen.move(left_margin + horiz_spacing * i + 2, top_margin + 6)
-    screen.text(loop.beat_types[i+1])
-
-    screen.level(2)
+    screen.level(6)
+    screen.move(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 2)
+    screen.line(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 6)
+    screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 6)
+    screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 2)
     screen.stroke()
 
-    screen.level(15)
+    for y, e in ipairs(EVENT_ORDER) do
+      screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin + vert_spacing * y)
+      if self.events[e] == 1 then
+        screen.level(15)
+      else
+        screen.level(1)
+      end
+      screen.text(e)
+    end
   end
 
-  screen.level(6)
-  screen.move(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 2)
-  screen.line(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 6)
-  screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 6)
-  screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 2)
-  screen.stroke()
-
+  screen.level(15)
   screen.move(left_margin, 40)
   screen.text(self.message)
   screen.move(left_margin, 50)
   screen.text(self.status)
-
-  for y, e in ipairs(EVENT_ORDER) do
-    screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin + vert_spacing * y)
-    if self.events[e] == 1 then
-      screen.level(15)
-    else
-      screen.level(1)
-    end
-    screen.text(e)
-  end
 end
 
 function Beets:drawEditingUI()

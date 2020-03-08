@@ -83,21 +83,7 @@ function key(n, z)
 end
 
 function init()
-  audio.rev_off()
-  audio.comp_off()
-
-  local bpm = 120
-
-  different_bpm_breaks = {
-    {file = _path.dust .. 'audio/breaks/BBB_110_BPM_PRO_BREAK_1.wav', kicks = {0}},
-    {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav', kicks = {0}},
-    {file = _path.dust .. 'audio/breaks/BBB_80_BPM_PRO_BREAK_10.wav', kicks = {0}}
-  }
-
-  unused_breaks = {
-    {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_1.wav', kicks = {0, 1, 5}},
-    {file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_3.wav', kicks = {0, 3, 5}},
-  }
+  audio.level_cut_rev(0)
 
   breaks = {
     { -- 1
@@ -135,15 +121,16 @@ function init()
     },
   }
 
-  for i, brk in ipairs(breaks) do
-    beets:load_loop(i, brk)
-  end
-
   beets.on_beat = function() crow.output[1]() end
   beets.on_beat_one = function() crow.output[2]() end
   beets.on_kick = function() crow.output[3]() end
+  beets.change_bpm = function(bpm) 
+    beat_clock:bpm_change(bpm) 
+  end
 
   beets:add_params()
+
+  local bpm = 130
 
   init_beatclock(bpm)
   init_crow()
