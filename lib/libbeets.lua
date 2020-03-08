@@ -58,7 +58,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
 
   self.played_index = self.index
 
-  if not running then
+  if not self.running then
     self.status = 'NOT RUNNING'
     return
   end
@@ -271,7 +271,7 @@ end
 function Beets:reset_loop_index_param()
   for _, p in ipairs(params.params) do
     if p.id == 'loop_index' then
-      p.controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
+      p.controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, '')
     end
   end
 end
