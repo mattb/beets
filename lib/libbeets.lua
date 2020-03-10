@@ -11,6 +11,7 @@ local Formatters = require 'formatters'
 local BREAK_OFFSET = 5
 local EVENT_ORDER = { "<", ">", "R", "S", "B" }
 local json = include("lib/json")
+local inspect = include("lib/inspect")
 
 function Beets.new(softcut_voice_id)
   local i = {
@@ -225,38 +226,47 @@ function Beets:load_loop(index, loop)
   local kicks = loop.kicks
   local snares = loop.snares
   local loop_info = {}
+  local json_filename = filename .. ".json"
 
-  local ch, samples, samplerate = audio.file_info(filename)
-  loop_info.frames = samples
-  loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
-  loop_info.duration = samples / 48000.0
-  loop_info.beat_types = { " ", " ", " ", " ", " ", " ", " ", " " }
-  loop_info.filename = filename
+  local f = io.open(json_filename)
+  if f ~= nil then
+    loop_info = json.decode(f:read("*a"))
+    print("Loop info loaded from " .. json_filename .. ": " .. inspect(loop_info))
+  else
+    local ch, samples, samplerate = audio.file_info(filename)
+    loop_info.frames = samples
+    loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
+    loop_info.duration = samples / 48000.0
+    loop_info.beat_types = { " ", " ", " ", " ", " ", " ", " ", " " }
+    loop_info.filename = filename
+
+    if kicks then
+      for _, beat in ipairs(kicks) do
+        loop_info.beat_types[beat + 1] = "K"
+      end
+    end
+
+    if snares then
+      for _, beat in ipairs(snares) do
+        loop_info.beat_types[beat + 1] = "S"
+      end
+    end
+
+    local f=io.open(json_filename, "w")
+    f:write(json.encode(loop_info))
+    f:close()
+  end
+
   loop_info.start = index * BREAK_OFFSET
   loop_info.index = index
 
   softcut.buffer_read_mono(filename, 0, loop_info.start, -1, 1, 1)
-
-  if kicks then
-    for _, beat in ipairs(kicks) do
-      loop_info.beat_types[beat + 1] = "K"
-    end
-  end
-
-  if snares then
-    for _, beat in ipairs(snares) do
-      loop_info.beat_types[beat + 1] = "S"
-    end
-  end
 
   self.loop_index_to_filename[index] = filename
   self.loops_by_filename[filename] = loop_info
   self.loop_count = index
   self:reset_loop_index_param()
 
-  local f=io.open(filename .. ".json", "w")
-  f:write(json.encode(loop_info))
-  f:close()
 end
 
 function Beets:softcut_init()
