@@ -21,7 +21,6 @@ function init_crow()
   crow.ii.pullup(true)
 end
 
-
 function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
@@ -84,42 +83,6 @@ end
 
 function init()
   audio.level_cut_rev(0)
-
-  breaks = {
-    { -- 1
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_2.wav',
-      kicks = {0, 3, 7},
-      snares = {2, 6}
-    },
-    { -- 2
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_6.wav',
-      kicks = {0, 4},
-    },
-    { -- 3
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_7.wav',
-      kicks = {0},
-    },
-    { -- 4
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_9.wav',
-      kicks = {0, 3, 5},
-    },
-    { -- 5
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_5.wav',
-      kicks = {0, 5},
-    },
-    { -- 6
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_4.wav',
-      kicks = {0, 3, 5},
-    },
-    { -- 7
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_8.wav',
-      kicks = {0, 5},
-    },
-    { -- 8
-      file = _path.dust .. 'audio/breaks/BBB_120_BPM_PRO_BREAK_10.wav',
-      kicks = {0, 3, 5, 7}, -- list of which beets contain kicks, so that a Crow trigger can fire every time they hit
-    },
-  }
 
   beets.on_beat = function() crow.output[1]() end
   beets.on_beat_one = function() crow.output[2]() end
