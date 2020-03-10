@@ -231,7 +231,6 @@ function Beets:load_loop(index, loop)
   local f = io.open(json_filename)
   if f ~= nil then
     loop_info = json.decode(f:read("*a"))
-    print("Loop info loaded from " .. json_filename .. ": " .. inspect(loop_info))
   else
     local ch, samples, samplerate = audio.file_info(filename)
     loop_info.frames = samples
@@ -477,51 +476,60 @@ function Beets:add_params()
   }
 end
 
+local layout = {
+  horiz_spacing = 9,
+  vert_spacing = 9,
+  left_margin = 10,
+  top_margin = 10
+}
+
+function Beets:_drawCurrentLoopGrid()
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+
+  for i = 0, 7 do
+    screen.rect(layout.left_margin + layout.horiz_spacing * i, layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
+    if self.played_index == i then
+      screen.level(15)
+    elseif self.beatstep == i then
+      screen.level(2)
+    else
+      screen.level(0)
+    end
+    screen.fill()
+    screen.rect(layout.left_margin + layout.horiz_spacing * i, layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
+
+    screen.level(1)
+    screen.move(layout.left_margin + layout.horiz_spacing * i + 2, layout.top_margin + 6)
+    screen.text(loop.beat_types[i+1])
+
+    screen.level(2)
+    screen.stroke()
+
+    screen.level(15)
+  end
+end
+
 function Beets:drawPlaybackUI()
-  local horiz_spacing = 9
-  local vert_spacing = 9
-  local left_margin = 10
-  local top_margin = 10
   screen.clear()
   screen.level(15)
 
   if self.loop_count > 0 then
-    local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+    self:_drawCurrentLoopGrid()
 
-    for i = 0, 7 do
-      screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
-      if self.played_index == i then
-        screen.level(15)
-      elseif self.beatstep == i then
-        screen.level(2)
-      else
-        screen.level(0)
-      end
-      screen.fill()
-      screen.rect(left_margin + horiz_spacing * i, top_margin, horiz_spacing, vert_spacing)
-
-      screen.level(1)
-      screen.move(left_margin + horiz_spacing * i + 2, top_margin + 6)
-      screen.text(loop.beat_types[i+1])
-
-      screen.level(2)
-      screen.stroke()
-
-      screen.level(15)
-    end
-
+    -- draw loop start/end
     screen.level(6)
-    screen.move(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 2)
-    screen.line(left_margin + self.beat_start * horiz_spacing, top_margin + vert_spacing + 6)
-    screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 6)
-    screen.line(left_margin + (self.beat_end + 1) * horiz_spacing, top_margin + vert_spacing + 2)
+    screen.move(layout.left_margin + self.beat_start * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 2)
+    screen.line(layout.left_margin + self.beat_start * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 6)
+    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 6)
+    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 2)
     screen.stroke()
 
+    -- draw event indicators
     screen.level(15)
-    screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin)
+    screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.top_margin)
     screen.text(self.played_loop_index)
     for y, e in ipairs(EVENT_ORDER) do
-      screen.move(left_margin + self.beat_count * horiz_spacing + 30, top_margin + vert_spacing * y)
+      screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.top_margin + layout.vert_spacing * y)
       if self.events[e] == 1 then
         screen.level(15)
       else
@@ -532,9 +540,9 @@ function Beets:drawPlaybackUI()
   end
 
   screen.level(15)
-  screen.move(left_margin, 40)
+  screen.move(layout.left_margin, 40)
   screen.text(self.message)
-  screen.move(left_margin, 50)
+  screen.move(layout.left_margin, 50)
   screen.text(self.status)
 end
 
