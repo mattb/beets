@@ -1,7 +1,3 @@
--- TODO:
---
--- highpass filter - requires intelligently switching the wet/dry mix of HP and LP based on which one is in use, or having a priority override
--- grids UI
 local Beets = {}
 Beets.__index = Beets
 
@@ -25,6 +21,9 @@ function Beets.new(softcut_voice_id)
     loop_index_to_filename = {},
     loop_count = 0,
     editing = false,
+    editing_mode = {
+      cursor_location = 0
+    },
 
     -- state that changes on the beat
     beatstep = 0,
@@ -74,6 +73,18 @@ function Beets:advance_step(in_beatstep, in_bpm)
     return
   end
 
+  if self.editing then
+    -- play the current edit position slice every other beat
+    -- so that it's easier to hear what the sound is at the start of the slice
+    if self.beatstep % 2 == 0 then
+      self:play_nothing()
+    else
+      local edit_index = math.floor(self.editing_mode.cursor_location)
+      self:play_slice(edit_index)
+    end
+    return
+  end
+
   self:play_slice(self.index)
   self:calculate_next_slice()
 end
@@ -104,6 +115,10 @@ function Beets:should(thing)
     return false
   end
   return math.random(100) <= self.probability[thing]
+end
+
+function Beets:play_nothing()
+  softcut.level(self.id, 0)
 end
 
 function Beets:play_slice(slice_index)
@@ -152,8 +167,8 @@ function Beets:play_slice(slice_index)
     softcut.level(self.id, 1)
   end
 
-  softcut.position(self.id, loop.start
-                     + (slice_index * (loop.duration / self.beat_count)))
+  local position = loop.start + (slice_index * (loop.duration / self.beat_count))
+  softcut.position(self.id, position)
 
   if self.muted then
     self.status = 'MUTED'
@@ -221,6 +236,14 @@ function Beets:load_directory(path, bpm)
   end
 end
 
+function Beets:save_loop_info(loop_info)
+  local json_filename = loop_info.filename .. ".json"
+  
+  local f=io.open(json_filename, "w")
+  f:write(json.encode(loop_info))
+  f:close()
+end
+
 function Beets:load_loop(index, loop)
   local filename = loop.file
   local kicks = loop.kicks
@@ -251,9 +274,7 @@ function Beets:load_loop(index, loop)
       end
     end
 
-    local f=io.open(json_filename, "w")
-    f:write(json.encode(loop_info))
-    f:close()
+    self:save_loop_info(loop_info)
   end
 
   loop_info.start = index * BREAK_OFFSET
@@ -265,7 +286,6 @@ function Beets:load_loop(index, loop)
   self.loops_by_filename[filename] = loop_info
   self.loop_count = index
   self:reset_loop_index_param()
-
 end
 
 function Beets:softcut_init()
@@ -483,14 +503,17 @@ local layout = {
   top_margin = 10
 }
 
-function Beets:_drawCurrentLoopGrid()
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+function Beets:_drawCurrentLoopGrid(options)
+  local played_index = options.played_index or self.played_index
+  local beatstep = options.beatstep or self.beatstep
+  local loop_index = options.loop_index or self.loop_index
 
+  local loop = self.loops_by_filename[self.loop_index_to_filename[loop_index]]
   for i = 0, 7 do
     screen.rect(layout.left_margin + layout.horiz_spacing * i, layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
-    if self.played_index == i then
+    if played_index == i then
       screen.level(15)
-    elseif self.beatstep == i then
+    elseif beatstep == i then
       screen.level(2)
     else
       screen.level(0)
@@ -514,7 +537,7 @@ function Beets:drawPlaybackUI()
   screen.level(15)
 
   if self.loop_count > 0 then
-    self:_drawCurrentLoopGrid()
+    self:_drawCurrentLoopGrid{}
 
     -- draw loop start/end
     screen.level(6)
@@ -547,7 +570,10 @@ function Beets:drawPlaybackUI()
 end
 
 function Beets:drawEditingUI()
-  screen.move(10, 10)
+  if self.loop_count > 0 then
+    self:_drawCurrentLoopGrid{played_index = math.floor(self.editing_mode.cursor_location), beatstep = math.floor(self.editing_mode.cursor_location)}
+  end
+  screen.move(layout.left_margin, 50)
   screen.text('EDIT MODE')
 end
 
@@ -565,20 +591,42 @@ end
 
 function Beets:edit_mode_begin()
   self.editing = true
+  self.enable_mutations = false
   redraw()
 end
 
 function Beets:edit_mode_end()
   self.editing = false
+  self.enable_mutations = true
+  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  self:save_loop_info(loop)
   redraw()
 end
 
 function Beets:enc(n, d)
-  print('Enc ' .. n .. ' ' .. d)
+  if n == 2 then
+    self.editing_mode.cursor_location = (self.editing_mode.cursor_location + (d / 50.0)) % self.beat_count
+    redraw()
+  else
+    print('Enc ' .. n .. ' ' .. d)
+  end
 end
 
 function Beets:key(n, z)
-  print('Key ' .. n .. ' ' .. z)
+  if n == 2 and z == 0 then
+    local beat_types_index = math.floor(self.editing_mode.cursor_location) + 1
+    local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+    if loop.beat_types[beat_types_index] == " " then
+      loop.beat_types[beat_types_index] = "K"
+    elseif loop.beat_types[beat_types_index] == "K" then
+      loop.beat_types[beat_types_index] = "S"
+    elseif loop.beat_types[beat_types_index] == "S" then
+      loop.beat_types[beat_types_index] = " "
+    end
+    redraw()
+  else
+    print('Key ' .. n .. ' ' .. z)
+  end
 end
 
 return Beets
