@@ -122,11 +122,6 @@ function Beets:play_nothing()
 end
 
 function Beets:play_slice(slice_index)
-  self.on_beat()
-  if self.beatstep == 0 then
-    self.on_beat_one()
-  end
-
   self.played_loop_index = self.loop_index
   if (self:should('loop_index_jump')) then
     self.played_loop_index = math.random(self.loop_count)
@@ -174,7 +169,14 @@ function Beets:play_slice(slice_index)
     self.status = 'MUTED'
   end
 
-  self:notify_beat(loop.beat_types[slice_index+1])
+  if not self.editing then
+    self.on_beat()
+    if self.beatstep == 0 then
+      self.on_beat_one()
+    end
+
+    self:notify_beat(loop.beat_types[slice_index+1])
+  end
 end
 
 function Beets:notify_beat(beat_type)
