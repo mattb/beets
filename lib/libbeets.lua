@@ -76,6 +76,13 @@ function Beets:advance_step(in_beatstep, in_bpm)
     self.status = 'NO LOOPS'
     return
   end
+  
+  if self.muted then
+    self.status = 'MUTED'
+    softcut.level(self.id, 0)
+  else
+    softcut.level(self.id, 1)
+  end
 
   self.on_beat()
   if in_beatstep % 2 == 0 then -- we get 16 steps per bar but we only want to act on 8 steps
@@ -159,17 +166,10 @@ function Beets:play_slice(slice_index)
     softcut.rate(self.id, current_rate)
   end
 
-  if self.muted then
-    softcut.level(self.id, 0)
-  else
-    softcut.level(self.id, 1)
-  end
 
   local position = loop.start +
                        (slice_index * (loop.duration / self.beat_count))
   softcut.position(self.id, position)
-
-  if self.muted then self.status = 'MUTED' end
 
   if not self.editing then self:notify_beat(loop.beat_types[slice_index + 1]) end
 end
