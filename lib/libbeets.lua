@@ -62,7 +62,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self.events = {}
   self.message = ''
   self.status = ''
-  self.beatstep = in_beatstep
+  self.beatstep = math.floor(in_beatstep / 2)
   self.current_bpm = in_bpm
 
   self.played_index = self.index
@@ -77,21 +77,20 @@ function Beets:advance_step(in_beatstep, in_bpm)
     return
   end
 
-  if self.editing then
-    -- play the current edit position slice every other beat
-    -- so that it's easier to hear what the sound is at the start of the slice
-    if self.beatstep % 2 == 0 then
-      self:play_nothing()
-    else
-      local edit_index = math.floor(self.editing_mode.cursor_location)
-      self:play_slice(edit_index)
-    end
-    return
-  end
-
   self.on_beat()
-  if self.beatstep == 0 then self.on_beat_one() end
-  if self.beatstep % 2 == 0 then
+  if in_beatstep % 2 == 0 then -- we get 16 steps per bar but we only want to act on 8 steps
+    if self.editing then
+      -- play the current edit position slice every other beat
+      -- so that it's easier to hear what the sound is at the start of the slice
+      if self.beatstep % 2 == 0 then
+        self:play_nothing()
+      else
+        local edit_index = math.floor(self.editing_mode.cursor_location)
+        self:play_slice(edit_index)
+      end
+      return
+    end
+    if self.beatstep == 0 then self.on_beat_one() end
     self:play_slice(self.index)
   else
     self:calculate_next_slice()
