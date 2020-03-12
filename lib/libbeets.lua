@@ -5,7 +5,7 @@ local ControlSpec = require 'controlspec'
 local Formatters = require 'formatters'
 
 local BREAK_OFFSET = 5
-local EVENT_ORDER = { "<", ">", "R", "S", "B" }
+local EVENT_ORDER = {"<", ">", "R", "S", "B"}
 local json = include("lib/json")
 local inspect = include("lib/inspect")
 
@@ -21,9 +21,7 @@ function Beets.new(softcut_voice_id)
     loop_index_to_filename = {},
     loop_count = 0,
     editing = false,
-    editing_mode = {
-      cursor_location = 0
-    },
+    editing_mode = {cursor_location = 0},
 
     -- state that changes on the beat
     beatstep = 0,
@@ -46,7 +44,13 @@ function Beets.new(softcut_voice_id)
     change_bpm = function() end,
 
     -- probability values
-    probability = {loop_index_jump = 0, stutter = 0, reverse = 0, jump = 0, jump_back = 0},
+    probability = {
+      loop_index_jump = 0,
+      stutter = 0,
+      reverse = 0,
+      jump = 0,
+      jump_back = 0
+    }
   }
 
   setmetatable(i, Beets)
@@ -86,9 +90,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   end
 
   self.on_beat()
-  if self.beatstep == 0 then
-    self.on_beat_one()
-  end
+  if self.beatstep == 0 then self.on_beat_one() end
   if beatstep % 2 == 0 then
     self:play_slice(self.index)
   else
@@ -113,20 +115,14 @@ function Beets:mute(in_muted)
   end
 end
 
-function Beets:toggle_mute()
-  self:mute(not self.muted)
-end
+function Beets:toggle_mute() self:mute(not self.muted) end
 
 function Beets:should(thing)
-  if not self.enable_mutations then
-    return false
-  end
+  if not self.enable_mutations then return false end
   return math.random(100) <= self.probability[thing]
 end
 
-function Beets:play_nothing()
-  softcut.level(self.id, 0)
-end
+function Beets:play_nothing() softcut.level(self.id, 0) end
 
 function Beets:play_slice(slice_index)
   self.played_loop_index = self.loop_index
@@ -137,18 +133,19 @@ function Beets:play_slice(slice_index)
     self.events['B'] = 0
   end
 
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.played_loop_index]]
+  local loop =
+      self.loops_by_filename[self.loop_index_to_filename[self.played_loop_index]]
   local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
 
   if (self:should('stutter')) then
     self.events['S'] = 1
     local stutter_amount = math.random(4)
-    softcut.loop_start(self.id, loop.start
-                         + (slice_index * (loop.duration / self.beat_count)))
+    softcut.loop_start(self.id, loop.start +
+                           (slice_index * (loop.duration / self.beat_count)))
     softcut.loop_end(self.id,
-                     loop.start
-                       + (slice_index * (loop.duration / self.beat_count)
-                         + (loop.duration / (64.0 / stutter_amount))))
+                     loop.start +
+                         (slice_index * (loop.duration / self.beat_count) +
+                             (loop.duration / (64.0 / stutter_amount))))
   else
     self.events['S'] = 0
     softcut.loop_start(self.id, loop.start)
@@ -169,32 +166,23 @@ function Beets:play_slice(slice_index)
     softcut.level(self.id, 1)
   end
 
-  local position = loop.start + (slice_index * (loop.duration / self.beat_count))
+  local position = loop.start +
+                       (slice_index * (loop.duration / self.beat_count))
   softcut.position(self.id, position)
 
-  if self.muted then
-    self.status = 'MUTED'
-  end
+  if self.muted then self.status = 'MUTED' end
 
-  if not self.editing then
-    self:notify_beat(loop.beat_types[slice_index+1])
-  end
+  if not self.editing then self:notify_beat(loop.beat_types[slice_index + 1]) end
 end
 
 function Beets:notify_beat(beat_type)
-  if beat_type == 'K' then
-    self.on_kick()
-  end
-  if beat_type == 'S' then
-    self.on_snare()
-  end
+  if beat_type == 'K' then self.on_kick() end
+  if beat_type == 'S' then self.on_snare() end
 end
 
 function Beets:calculate_next_slice()
   local new_index = self.index + 1
-  if new_index > self.beat_end then
-    new_index = self.beat_start
-  end
+  if new_index > self.beat_end then new_index = self.beat_start end
 
   if (self:should('jump')) then
     self.events['>'] = 1
@@ -210,9 +198,7 @@ function Beets:calculate_next_slice()
     self.events['<'] = 0
   end
 
-  if (self.beatstep == self.beat_count - 1) then
-    new_index = self.beat_start
-  end
+  if (self.beatstep == self.beat_count - 1) then new_index = self.beat_start end
   self.index = new_index
 end
 
@@ -228,22 +214,20 @@ function Beets:load_directory(path, bpm)
   self.change_bpm(bpm)
 
   f = io.popen('ls ' .. path .. "/*.wav")
-  filenames={}
-  for name in f:lines() do 
-    table.insert(filenames, name)
-  end
+  filenames = {}
+  for name in f:lines() do table.insert(filenames, name) end
   table.sort(filenames)
 
   for i, name in ipairs(filenames) do
-    self:load_loop(i,{ file=name })
-    i=i+1
+    self:load_loop(i, {file = name})
+    i = i + 1
   end
 end
 
 function Beets:save_loop_info(loop_info)
   local json_filename = loop_info.filename .. ".json"
-  
-  local f=io.open(json_filename, "w")
+
+  local f = io.open(json_filename, "w")
   f:write(json.encode(loop_info))
   f:close()
 end
@@ -263,19 +247,15 @@ function Beets:load_loop(index, loop)
     loop_info.frames = samples
     loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
     loop_info.duration = samples / 48000.0
-    loop_info.beat_types = { " ", " ", " ", " ", " ", " ", " ", " " }
+    loop_info.beat_types = {" ", " ", " ", " ", " ", " ", " ", " "}
     loop_info.filename = filename
 
     if kicks then
-      for _, beat in ipairs(kicks) do
-        loop_info.beat_types[beat + 1] = "K"
-      end
+      for _, beat in ipairs(kicks) do loop_info.beat_types[beat + 1] = "K" end
     end
 
     if snares then
-      for _, beat in ipairs(snares) do
-        loop_info.beat_types[beat + 1] = "S"
-      end
+      for _, beat in ipairs(snares) do loop_info.beat_types[beat + 1] = "S" end
     end
 
     self:save_loop_info(loop_info)
@@ -336,14 +316,14 @@ function Beets:add_params()
   specs.FILTER_RESONANCE = ControlSpec.new(0.05, 1, 'lin', 0, 0.25, '')
   specs.PERCENTAGE = ControlSpec.new(0, 1, 'lin', 0.01, 0, '%')
   specs.BEAT_START = ControlSpec.new(0, self.beat_count - 1, 'lin', 1, 0, '')
-  specs.BEAT_END =
-    ControlSpec.new(0, self.beat_count - 1, 'lin', 1, self.beat_count - 1, '')
+  specs.BEAT_END = ControlSpec.new(0, self.beat_count - 1, 'lin', 1,
+                                   self.beat_count - 1, '')
 
   local files = {}
   local files_count = 0
   local loops_dir = _path.dust .. 'audio/beets/'
   f = io.popen('cd ' .. loops_dir .. "; ls -d *")
-  for name in f:lines() do 
+  for name in f:lines() do
     table.insert(files, name)
     files_count = files_count + 1
   end
@@ -362,9 +342,7 @@ function Beets:add_params()
     id = 'dir_chooser',
     name = name,
     options = files,
-    action = function(value)
-      self.loops_folder_name = files[value]
-    end
+    action = function(value) self.loops_folder_name = files[value] end
   }
 
   params:add{
@@ -374,9 +352,7 @@ function Beets:add_params()
     min = 1,
     max = 300,
     default = self.initial_bpm,
-    action = function(value)
-      self.initial_bpm = value
-    end
+    action = function(value) self.initial_bpm = value end
   }
 
   params:add{
@@ -384,10 +360,10 @@ function Beets:add_params()
     id = 'load_loops',
     name = 'Load loops',
     action = function(value)
-      if value == "-" then
-	return
-      end
-      self:load_directory(_path.dust .. 'audio/beets/' .. self.loops_folder_name, self.initial_bpm)
+      if value == "-" then return end
+      self:load_directory(
+          _path.dust .. 'audio/beets/' .. self.loops_folder_name,
+          self.initial_bpm)
     end
   }
 
@@ -398,9 +374,7 @@ function Beets:add_params()
     id = 'loop_index',
     name = 'Sample',
     controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
-    action = function(value)
-      self.loop_index = value
-    end,
+    action = function(value) self.loop_index = value end
   }
 
   params:add{
@@ -409,9 +383,7 @@ function Beets:add_params()
     name = 'Jump Back Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
-    action = function(value)
-      self.probability.jump_back = value * 100
-    end,
+    action = function(value) self.probability.jump_back = value * 100 end
   }
 
   params:add{
@@ -420,9 +392,7 @@ function Beets:add_params()
     name = 'Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
-    action = function(value)
-      self.probability.jump = value * 100
-    end,
+    action = function(value) self.probability.jump = value * 100 end
   }
 
   params:add{
@@ -431,9 +401,7 @@ function Beets:add_params()
     name = 'Reverse Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
-    action = function(value)
-      self.probability.reverse = value * 100
-    end,
+    action = function(value) self.probability.reverse = value * 100 end
   }
 
   params:add{
@@ -442,9 +410,7 @@ function Beets:add_params()
     name = 'Stutter Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
-    action = function(value)
-      self.probability.stutter = value * 100
-    end,
+    action = function(value) self.probability.stutter = value * 100 end
   }
 
   params:add{
@@ -453,9 +419,7 @@ function Beets:add_params()
     name = 'Break Index Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
-    action = function(value)
-      self.probability.loop_index_jump = value * 100
-    end,
+    action = function(value) self.probability.loop_index_jump = value * 100 end
   }
 
   params:add{
@@ -464,9 +428,7 @@ function Beets:add_params()
     name = 'Filter Cutoff',
     controlspec = specs.FILTER_FREQ,
     formatter = Formatters.format_freq,
-    action = function(value)
-      softcut.post_filter_fc(self.id, value)
-    end,
+    action = function(value) softcut.post_filter_fc(self.id, value) end
   }
 
   params:add{
@@ -474,9 +436,7 @@ function Beets:add_params()
     id = 'filter_reso',
     name = 'Filter Resonance',
     controlspec = specs.FILTER_RESONANCE,
-    action = function(value)
-      softcut.post_filter_rq(self.id, value)
-    end,
+    action = function(value) softcut.post_filter_rq(self.id, value) end
   }
 
   params:add{
@@ -484,9 +444,7 @@ function Beets:add_params()
     id = 'beat_start',
     name = 'Beat Start',
     controlspec = specs.BEAT_START,
-    action = function(value)
-      self.beat_start = value
-    end,
+    action = function(value) self.beat_start = value end
   }
 
   params:add{
@@ -494,9 +452,7 @@ function Beets:add_params()
     id = 'beat_end',
     name = 'Beat End',
     controlspec = specs.BEAT_END,
-    action = function(value)
-      self.beat_end = value
-    end,
+    action = function(value) self.beat_end = value end
   }
 end
 
@@ -514,7 +470,8 @@ function Beets:_drawCurrentLoopGrid(options)
 
   local loop = self.loops_by_filename[self.loop_index_to_filename[loop_index]]
   for i = 0, 7 do
-    screen.rect(layout.left_margin + layout.horiz_spacing * i, layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
+    screen.rect(layout.left_margin + layout.horiz_spacing * i,
+                layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
     if played_index == i then
       screen.level(15)
     elseif beatstep == i then
@@ -523,11 +480,13 @@ function Beets:_drawCurrentLoopGrid(options)
       screen.level(0)
     end
     screen.fill()
-    screen.rect(layout.left_margin + layout.horiz_spacing * i, layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
+    screen.rect(layout.left_margin + layout.horiz_spacing * i,
+                layout.top_margin, layout.horiz_spacing, layout.vert_spacing)
 
     screen.level(1)
-    screen.move(layout.left_margin + layout.horiz_spacing * i + 2, layout.top_margin + 6)
-    screen.text(loop.beat_types[i+1])
+    screen.move(layout.left_margin + layout.horiz_spacing * i + 2,
+                layout.top_margin + 6)
+    screen.text(loop.beat_types[i + 1])
 
     screen.level(2)
     screen.stroke()
@@ -545,18 +504,25 @@ function Beets:drawPlaybackUI()
 
     -- draw loop start/end
     screen.level(6)
-    screen.move(layout.left_margin + self.beat_start * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 2)
-    screen.line(layout.left_margin + self.beat_start * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 6)
-    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 6)
-    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing, layout.top_margin + layout.vert_spacing + 2)
+    screen.move(layout.left_margin + self.beat_start * layout.horiz_spacing,
+                layout.top_margin + layout.vert_spacing + 2)
+    screen.line(layout.left_margin + self.beat_start * layout.horiz_spacing,
+                layout.top_margin + layout.vert_spacing + 6)
+    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing,
+                layout.top_margin + layout.vert_spacing + 6)
+    screen.line(layout.left_margin + (self.beat_end + 1) * layout.horiz_spacing,
+                layout.top_margin + layout.vert_spacing + 2)
     screen.stroke()
 
     -- draw event indicators
     screen.level(15)
-    screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.top_margin)
+    screen.move(
+        layout.left_margin + self.beat_count * layout.horiz_spacing + 30,
+        layout.top_margin)
     screen.text(self.played_loop_index)
     for y, e in ipairs(EVENT_ORDER) do
-      screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.top_margin + layout.vert_spacing * y)
+      screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing +
+                      30, layout.top_margin + layout.vert_spacing * y)
       if self.events[e] == 1 then
         screen.level(15)
       else
@@ -575,7 +541,10 @@ end
 
 function Beets:drawEditingUI()
   if self.loop_count > 0 then
-    self:_drawCurrentLoopGrid{played_index = math.floor(self.editing_mode.cursor_location), beatstep = math.floor(self.editing_mode.cursor_location)}
+    self:_drawCurrentLoopGrid{
+      played_index = math.floor(self.editing_mode.cursor_location),
+      beatstep = math.floor(self.editing_mode.cursor_location)
+    }
   end
   screen.move(layout.left_margin, 50)
   screen.text('EDIT MODE')
@@ -602,14 +571,16 @@ end
 function Beets:edit_mode_end()
   self.editing = false
   self.enable_mutations = true
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  local loop =
+      self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
   self:save_loop_info(loop)
   redraw()
 end
 
 function Beets:enc(n, d)
   if n == 2 then
-    self.editing_mode.cursor_location = (self.editing_mode.cursor_location + (d / 50.0)) % self.beat_count
+    self.editing_mode.cursor_location = (self.editing_mode.cursor_location +
+                                            (d / 50.0)) % self.beat_count
     redraw()
   else
     print('Enc ' .. n .. ' ' .. d)
@@ -619,7 +590,8 @@ end
 function Beets:key(n, z)
   if n == 2 and z == 0 then
     local beat_types_index = math.floor(self.editing_mode.cursor_location) + 1
-    local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+    local loop =
+        self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
     if loop.beat_types[beat_types_index] == " " then
       loop.beat_types[beat_types_index] = "K"
     elseif loop.beat_types[beat_types_index] == "K" then

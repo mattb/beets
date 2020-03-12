@@ -25,12 +25,8 @@ function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
   beat_clock.steps_per_beat = 4
-  beat_clock.on_select_internal = function()
-    beat_clock:start()
-  end
-  beat_clock.on_select_external = function()
-    print('external')
-  end
+  beat_clock.on_select_internal = function() beat_clock:start() end
+  beat_clock.on_select_external = function() print('external') end
   beat_clock:start()
   beat_clock:bpm_change(bpm)
   beat_clock:add_clock_params()
@@ -39,21 +35,16 @@ function init_beatclock(bpm)
   clk_midi.event = beat_clock.process_mid
 
   beat_clock.on_step = function()
-    local beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
+    local beatstep = beat_clock.steps_per_beat * beat_clock.beat +
+                         beat_clock.step
     beets:advance_step(beatstep, beat_clock.bpm)
     redraw()
   end
 end
 
-function redraw()
-  beets:drawUI()
-end
+function redraw() beets:drawUI() end
 
-function enc(n, d)
-  if editing then
-    beets:enc(n, d)
-  end
-end
+function enc(n, d) if editing then beets:enc(n, d) end end
 
 function key(n, z)
   if n == 1 and z == 1 then
@@ -72,12 +63,8 @@ function key(n, z)
       editing = true
       beets:show_edit_screen()
     end
-    if n == 2 and z == 0 then
-      beets:toggle_mute()
-    end
-    if n == 3 then
-      beets:instant_toggle_mute()
-    end
+    if n == 2 and z == 0 then beets:toggle_mute() end
+    if n == 3 then beets:instant_toggle_mute() end
   end
 end
 
@@ -87,9 +74,7 @@ function init()
   beets.on_beat = function() crow.output[1]() end
   beets.on_beat_one = function() crow.output[2]() end
   beets.on_kick = function() crow.output[3]() end
-  beets.change_bpm = function(bpm) 
-    beat_clock:bpm_change(bpm) 
-  end
+  beets.change_bpm = function(bpm) beat_clock:bpm_change(bpm) end
 
   beets:add_params()
 
