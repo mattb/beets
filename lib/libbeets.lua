@@ -85,8 +85,15 @@ function Beets:advance_step(in_beatstep, in_bpm)
     return
   end
 
-  self:play_slice(self.index)
-  self:calculate_next_slice()
+  self.on_beat()
+  if self.beatstep == 0 then
+    self.on_beat_one()
+  end
+  if beatstep % 2 == 0 then
+    self:play_slice(self.index)
+  else
+    self:calculate_next_slice()
+  end
 end
 
 function Beets:instant_toggle_mute()
@@ -170,11 +177,6 @@ function Beets:play_slice(slice_index)
   end
 
   if not self.editing then
-    self.on_beat()
-    if self.beatstep == 0 then
-      self.on_beat_one()
-    end
-
     self:notify_beat(loop.beat_types[slice_index+1])
   end
 end

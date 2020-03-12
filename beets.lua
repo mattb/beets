@@ -24,7 +24,7 @@ end
 function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
-  beat_clock.steps_per_beat = 2
+  beat_clock.steps_per_beat = 4
   beat_clock.on_select_internal = function()
     beat_clock:start()
   end
