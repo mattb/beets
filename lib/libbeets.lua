@@ -213,7 +213,7 @@ function Beets:load_directory(path, bpm)
   self.initial_bpm = bpm
   self.change_bpm(bpm)
 
-  f = io.popen('ls ' .. path .. "/*.wav")
+  local f = io.popen('ls ' .. path .. "/*.wav")
   local filenames = {}
   for name in f:lines() do table.insert(filenames, name) end
   table.sort(filenames)
@@ -322,13 +322,14 @@ function Beets:add_params()
   local files = {}
   local files_count = 0
   local loops_dir = _path.dust .. 'audio/beets/'
-  f = io.popen('cd ' .. loops_dir .. "; ls -d *")
+  local f = io.popen('cd ' .. loops_dir .. "; ls -d *")
   for name in f:lines() do
     table.insert(files, name)
     files_count = files_count + 1
   end
   table.sort(files)
 
+  local name
   if files_count == 0 then
     name = 'Create folders in audio/beets to load'
     self.loops_folder_name = "-"

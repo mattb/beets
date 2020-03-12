@@ -6,6 +6,11 @@
         "audio",
         "params",
         "_path",
-        "screen"
+        "screen",
+        "midi",
+        "redraw",
+        "enc",
+        "key",
+        "init"
     ]
 }

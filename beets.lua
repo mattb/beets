@@ -14,14 +14,14 @@ local beets = Beets.new(1)
 
 local editing = false
 
-function init_crow()
+local function init_crow()
   crow.output[1].action = 'pulse(0.001, 5, 1)'
   crow.output[2].action = 'pulse(0.001, 5, 1)'
   crow.output[3].action = 'pulse(0.001, 5, 1)'
   crow.ii.pullup(true)
 end
 
-function init_beatclock(bpm)
+local function init_beatclock(bpm)
   beat_clock = BeatClock.new()
   beat_clock.ticks_per_step = 6
   beat_clock.steps_per_beat = 4
