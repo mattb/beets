@@ -1,0 +1,11 @@
+{
+  "name": "norns-reload",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "norns-reload": "node norns-reload.js"
+  },
+  "dependencies": {
+    "ws": "^7.2.1"
+  }
+}
