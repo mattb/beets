@@ -91,7 +91,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
 
   self.on_beat()
   if self.beatstep == 0 then self.on_beat_one() end
-  if beatstep % 2 == 0 then
+  if self.beatstep % 2 == 0 then
     self:play_slice(self.index)
   else
     self:calculate_next_slice()
@@ -214,7 +214,7 @@ function Beets:load_directory(path, bpm)
   self.change_bpm(bpm)
 
   f = io.popen('ls ' .. path .. "/*.wav")
-  filenames = {}
+  local filenames = {}
   for name in f:lines() do table.insert(filenames, name) end
   table.sort(filenames)
 
