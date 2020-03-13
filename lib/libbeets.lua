@@ -497,7 +497,7 @@ function Beets:_drawCurrentLoopGrid(options)
     screen.level(2)
     screen.stroke()
 
-    screen.lvel(15)
+    screen.level(15)
   end
 end
 
