@@ -5,6 +5,7 @@ local ControlSpec = require 'controlspec'
 local Formatters = require 'formatters'
 
 local BREAK_OFFSET = 5
+local VOICE_OFFSET = 100
 local EVENT_ORDER = {"<", ">", "R", "S", "B"}
 local PROBABILITY_ORDER = { "jump_back", "jump", "reverse", "stutter", "loop_index_jump" }
 local json = include("lib/json")
@@ -24,6 +25,7 @@ function Beets.new(options)
     loop_count = 0,
     editing = false,
     editing_mode = {cursor_location = 0},
+    amplitude = 1,
 
     -- state that changes on the beat
     beatstep = 0,
@@ -55,7 +57,9 @@ function Beets.new(options)
     },
 
     ui = {
-      slice_buttons_down = {}
+      slice_buttons_down = {},
+      mute_button = 0,
+      shift_button = 0
     }
   }
 
@@ -87,7 +91,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
     self.status = 'MUTED'
     softcut.level(self.id, 0)
   else
-    softcut.level(self.id, 1)
+    softcut.level(self.id, self.amplitude)
   end
 
   self.on_beat()
@@ -115,7 +119,7 @@ function Beets:instant_toggle_mute()
   if self.muted then
     softcut.level(self.id, 0)
   else
-    softcut.level(self.id, 1)
+    softcut.level(self.id, self.amplitude)
   end
 end
 
@@ -137,13 +141,13 @@ end
 function Beets:play_nothing() softcut.level(self.id, 0) end
 
 function Beets:play_slice(slice_index)
-  self.played_loop_index = self.loop_index
   if (self:should('loop_index_jump')) then
-    self.played_loop_index = math.random(self.loop_count)
+    params:set(self.id .. "_" .. "loop_index", math.random(self.loop_count))
     self.events['B'] = 1
   else
     self.events['B'] = 0
   end
+  self.played_loop_index = self.loop_index
 
   local loop =
       self.loops_by_filename[self.loop_index_to_filename[self.played_loop_index]]
@@ -266,7 +270,7 @@ function Beets:load_loop(index, loop)
     self:save_loop_info(loop_info)
   end
 
-  loop_info.start = index * BREAK_OFFSET
+  loop_info.start = index * BREAK_OFFSET + self.id * VOICE_OFFSET
   loop_info.index = index
 
   softcut.buffer_read_mono(filename, 0, loop_info.start, -1, 1, 1)
@@ -280,7 +284,7 @@ end
 function Beets:softcut_init()
   softcut.enable(self.id, 1)
   softcut.buffer(self.id, 1)
-  softcut.level(self.id, 1)
+  softcut.level(self.id, self.amplitude)
   softcut.level_slew_time(self.id, 0.2)
   softcut.loop(self.id, 1)
   softcut.loop_start(self.id, 0)
@@ -309,7 +313,7 @@ end
 
 function Beets:reset_loop_index_param()
   for _, p in ipairs(params.params) do
-    if p.id == 'loop_index' then
+    if p.id == self.id .. "_" .. 'loop_index' then
       p.controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, '')
     end
   end
@@ -317,6 +321,7 @@ end
 
 function Beets:add_params()
   local specs = {}
+  specs.AMP = ControlSpec.new(0, 1, 'lin', 0, 1, '')
   specs.FILTER_FREQ = ControlSpec.new(20, 20000, 'exp', 0, 20000, 'Hz')
   specs.FILTER_RESONANCE = ControlSpec.new(0.05, 1, 'lin', 0, 0.25, '')
   specs.PERCENTAGE = ControlSpec.new(0, 1, 'lin', 0.01, 0, '%')
@@ -345,16 +350,16 @@ function Beets:add_params()
 
   params:add{
     type = 'option',
-    id = 'dir_chooser',
-    name = name,
+    id = self.id .. "_" .. 'dir_chooser',
+    name = self.id .. ": " .. name,
     options = files,
     action = function(value) self.loops_folder_name = files[value] end
   }
 
   params:add{
     type = 'number',
-    id = 'dir_bpm',
-    name = 'Loops BPM',
+    id = self.id .. "_" .. 'dir_bpm',
+    name = self.id .. ": " .. 'Loops BPM',
     min = 1,
     max = 300,
     default = self.initial_bpm,
@@ -363,8 +368,8 @@ function Beets:add_params()
 
   params:add{
     type = 'trigger',
-    id = 'load_loops',
-    name = 'Load loops',
+    id = self.id .. "_" .. 'load_loops',
+    name = self.id .. ": " .. 'Load loops',
     action = function(value)
       if value == "-" then return end
       self:load_directory(
@@ -377,16 +382,28 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'loop_index',
-    name = 'Sample',
+    id = self.id .. "_" .. 'amplitude',
+    name = self.id .. ": " .. 'Amplitude',
+    controlspec = specs.AMP,
+    default = 1.0,
+    action = function(value) 
+      self.amplitude = value
+      softcut.level(self.id, self.amplitude)
+    end
+  }
+
+  params:add{
+    type = 'control',
+    id = self.id .. "_" .. 'loop_index',
+    name = self.id .. ": " .. 'Sample',
     controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
     action = function(value) self.loop_index = value end
   }
 
   params:add{
     type = 'control',
-    id = 'jump_back_probability',
-    name = 'Jump Back Probability',
+    id = self.id .. "_" .. 'jump_back_probability',
+    name = self.id .. ": " .. 'Jump Back Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value) self.probability.jump_back = value * 100 end
@@ -394,8 +411,8 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'jump_probability',
-    name = 'Jump Probability',
+    id = self.id .. "_" .. 'jump_probability',
+    name = self.id .. ": " .. 'Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value) self.probability.jump = value * 100 end
@@ -403,8 +420,8 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'reverse_probability',
-    name = 'Reverse Probability',
+    id = self.id .. "_" .. 'reverse_probability',
+    name = self.id .. ": " .. 'Reverse Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value) self.probability.reverse = value * 100 end
@@ -412,8 +429,8 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'stutter_probability',
-    name = 'Stutter Probability',
+    id = self.id .. "_" .. 'stutter_probability',
+    name = self.id .. ": " .. 'Stutter Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value) self.probability.stutter = value * 100 end
@@ -421,8 +438,8 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'loop_index_jump_probability',
-    name = 'Break Index Jump Probability',
+    id = self.id .. "_" .. 'loop_index_jump_probability',
+    name = self.id .. ": " .. 'Break Index Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value) self.probability.loop_index_jump = value * 100 end
@@ -430,8 +447,8 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'filter_frequency',
-    name = 'Filter Cutoff',
+    id = self.id .. "_" .. 'filter_frequency',
+    name = self.id .. ": " .. 'Filter Cutoff',
     controlspec = specs.FILTER_FREQ,
     formatter = Formatters.format_freq,
     action = function(value) softcut.post_filter_fc(self.id, value) end
@@ -439,24 +456,24 @@ function Beets:add_params()
 
   params:add{
     type = 'control',
-    id = 'filter_reso',
-    name = 'Filter Resonance',
+    id = self.id .. "_" .. 'filter_reso',
+    name = self.id .. ": " .. 'Filter Resonance',
     controlspec = specs.FILTER_RESONANCE,
     action = function(value) softcut.post_filter_rq(self.id, value) end
   }
 
   params:add{
     type = 'control',
-    id = 'beat_start',
-    name = 'Beat Start',
+    id = self.id .. "_" .. 'beat_start',
+    name = self.id .. ": " .. 'Beat Start',
     controlspec = specs.BEAT_START,
     action = function(value) self.beat_start = value end
   }
 
   params:add{
     type = 'control',
-    id = 'beat_end',
-    name = 'Beat End',
+    id = self.id .. "_" .. 'beat_end',
+    name = self.id .. ": " .. 'Beat End',
     controlspec = specs.BEAT_END,
     action = function(value) self.beat_end = value end
   }
@@ -503,8 +520,23 @@ end
 
 function Beets:grid_key(x,y,z)
   if self.loop_count == 0 or self.editing then return end
+  if x == 7 and y == 8 then
+    self.ui.mute_button = z
+    if z == 0 then 
+      self:toggle_mute()
+    end
+    redraw()
+  end
+  if x == 8 and y == 8 then
+    self.ui.shift_button = z
+    redraw()
+  end
   if y == 1 and x <= self.beat_count then
-    if z == 1 then 
+    if self.ui.shift_button == 1 then
+      if z == 0 then
+        self.index = (x - 1) % self.beat_count
+      end
+    elseif z == 1 then 
       self.ui.slice_buttons_down[x] = 1 
       local count = 0
       local first, second
@@ -525,8 +557,8 @@ function Beets:grid_key(x,y,z)
         if self.ui.slice_button_saved then
           if self.ui.slice_button_saved == x then 
             -- DOUBLE TAP!
-            params:set("beat_start", x - 1)
-            params:set("beat_end", x - 1)
+            params:set(self.id .. "_" .. "beat_start", x - 1)
+            params:set(self.id .. "_" .. "beat_end", x - 1)
           end
           self.ui.slice_button_saved = nil
         else
@@ -536,8 +568,8 @@ function Beets:grid_key(x,y,z)
         self.ui.slice_button_saved = nil
       end
       if count == 2 then
-        params:set("beat_start", first - 1)
-        params:set("beat_end", second - 1)
+        params:set(self.id .. "_" .. "beat_start", first - 1)
+        params:set(self.id .. "_" .. "beat_end", second - 1)
       end
     else
       if self.ui.slice_button_saved then
@@ -551,8 +583,9 @@ function Beets:grid_key(x,y,z)
     end
   end
 
+  print(x .. y .. z)
   if y == 2 and x <= self.loop_count then
-    if z == 1 then params:set("loop_index", x) end
+    if z == 1 then params:set(self.id .. "_" .. "loop_index", x) end
   end
 
   local c = 0
@@ -560,12 +593,29 @@ function Beets:grid_key(x,y,z)
   if x <= c and y > 3 and z == 1 then
     local name = PROBABILITY_ORDER[x]
     local value = (8 - y) / 4
-    params:set(name .. "_probability", value)
+    params:set(self.id .. "_" .. name .. "_probability", value)
   end
 end
 
 function Beets:drawGridUI(g, top_x, top_y)
   if self.loop_count == 0 then return end
+
+  -- shift
+  if self.ui.shift_button == 1 then
+    g:led(top_x + 7, top_y + 7, 15)
+  else
+    g:led(top_x + 7, top_y + 7, 4)
+  end
+
+  local mute_brightness = 4
+  if self.ui.mute_button == 1 then
+    mute_brightness = 15
+  else
+    if self.muted then
+      mute_brightness = 12
+    end
+  end
+  g:led(top_x + 6, top_y + 7, mute_brightness)
   
   -- beat (0-based)
   for i = 0, self.beat_count - 1 do
@@ -579,7 +629,7 @@ function Beets:drawGridUI(g, top_x, top_y)
   end
 
   -- loop index (1-based)
-  for i = 0, math.max(7, self.loop_count - 1) do
+  for i = 0, math.min(7, self.loop_count - 1) do
     if i == self.loop_index - 1 then
       g:led(top_x + i, top_y + 1, 15)
     else

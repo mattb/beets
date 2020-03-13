@@ -11,12 +11,17 @@ local Beets = include('lib/libbeets')
 
 local beat_clock
 local beets = Beets.new{softcut_voice_id=1}
+local beets2 = Beets.new{softcut_voice_id=2}
 
 local editing = false
 local g = grid.connect()
 
 g.key = function(x,y,z)
-  beets:grid_key(x,y,z)
+  if x < 9 then
+    beets:grid_key(x,y,z)
+  else
+    beets2:grid_key(x-8,y,z)
+  end
 end
 
 local function init_crow()
@@ -43,8 +48,10 @@ local function init_beatclock(bpm)
     local beatstep = beat_clock.steps_per_beat * beat_clock.beat +
                          beat_clock.step
     beets:advance_step(beatstep, beat_clock.bpm)
+    beets2:advance_step(beatstep, beat_clock.bpm)
     redraw()
     beets:drawGridUI(g, 1, 1)
+    beets2:drawGridUI(g, 9, 1)
     g:refresh()
   end
 end
@@ -82,12 +89,18 @@ function init()
   beets.on_beat_one = function() crow.output[2]() end
   beets.on_kick = function() crow.output[3]() end
   beets.change_bpm = function(bpm) beat_clock:bpm_change(bpm) end
+  
+  beets2.change_bpm = function(bpm) beat_clock:bpm_change(bpm) end
 
   beets:add_params()
+  params:add_separator()
+  beets2:add_params()
+  params:add_separator()
 
   local bpm = 130
 
   init_beatclock(bpm)
   init_crow()
   beets:start(bpm)
+  beets2:start(bpm)
 end
