@@ -521,11 +521,32 @@ function Beets:grid_key(x,y,z)
         end
         count = count + 1 
       end
+      if count == 1 then -- for double-tap single-button-loop handling
+        if self.ui.slice_button_saved then
+          if self.ui.slice_button_saved == x then 
+            -- DOUBLE TAP!
+            params:set("beat_start", x - 1)
+            params:set("beat_end", x - 1)
+          end
+          self.ui.slice_button_saved = nil
+        else
+          self.ui.slice_button_saved = x
+        end
+      else
+        self.ui.slice_button_saved = nil
+      end
       if count == 2 then
         params:set("beat_start", first - 1)
         params:set("beat_end", second - 1)
       end
     else
+      if self.ui.slice_button_saved then
+        local count = 0
+        for _ in pairs(self.ui.slice_buttons_down) do count = count + 1 end
+        if count ~= 1 then
+          self.ui.slice_button_saved = nil
+        end
+      end
       self.ui.slice_buttons_down[x] = nil 
     end
   end
