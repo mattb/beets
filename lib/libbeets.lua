@@ -6,10 +6,12 @@ local Formatters = require 'formatters'
 
 local BREAK_OFFSET = 5
 local EVENT_ORDER = {"<", ">", "R", "S", "B"}
+local PROBABILITY_ORDER = { "jump_back", "jump", "reverse", "stutter", "loop_index_jump" }
 local json = include("lib/json")
 local inspect = include("lib/inspect")
 
-function Beets.new(softcut_voice_id)
+function Beets.new(options)
+  local softcut_voice_id = options.softcut_voice_id or 1
   local i = {
     -- descriptive global state
     running = false,
@@ -50,6 +52,10 @@ function Beets.new(softcut_voice_id)
       reverse = 0,
       jump = 0,
       jump_back = 0
+    },
+
+    ui = {
+      slice_buttons_down = {}
     }
   }
 
@@ -491,7 +497,94 @@ function Beets:_drawCurrentLoopGrid(options)
     screen.level(2)
     screen.stroke()
 
-    screen.level(15)
+    screen.lvel(15)
+  end
+end
+
+function Beets:grid_key(x,y,z)
+  if self.loop_count == 0 or self.editing then return end
+  if y == 1 and x <= self.beat_count then
+    if z == 1 then 
+      self.ui.slice_buttons_down[x] = 1 
+      local count = 0
+      local first, second
+      for button_down in pairs(self.ui.slice_buttons_down) do 
+        if first == nil then
+          first = button_down
+        else
+          if button_down > first then
+            second = button_down
+          else
+            second = first
+            first = button_down
+          end
+        end
+        count = count + 1 
+      end
+      if count == 2 then
+        params:set("beat_start", first - 1)
+        params:set("beat_end", second - 1)
+      end
+    else
+      self.ui.slice_buttons_down[x] = nil 
+    end
+  end
+
+  if y == 2 and x <= self.loop_count then
+    if z == 1 then params:set("loop_index", x) end
+  end
+
+  local c = 0
+  for _ in pairs(PROBABILITY_ORDER) do c = c + 1 end
+  if x <= c and y > 3 and z == 1 then
+    local name = PROBABILITY_ORDER[x]
+    local value = (8 - y) / 4
+    params:set(name .. "_probability", value)
+  end
+end
+
+function Beets:drawGridUI(g, top_x, top_y)
+  if self.loop_count == 0 then return end
+  
+  -- beat (0-based)
+  for i = 0, self.beat_count - 1 do
+    if i == self.played_index then
+      g:led(top_x + i, top_y, 15)
+    elseif i >= self.beat_start and i <= self.beat_end then
+      g:led(top_x + i, top_y, 6)
+    else
+      g:led(top_x + i, top_y, 3)
+    end
+  end
+
+  -- loop index (1-based)
+  for i = 0, math.max(7, self.loop_count - 1) do
+    if i == self.loop_index - 1 then
+      g:led(top_x + i, top_y + 1, 15)
+    else
+      g:led(top_x + i, top_y + 1, 2)
+    end
+  end
+
+  local stripe_min = 5
+  local inter_stripe_diff = 1
+  for x, name in ipairs(PROBABILITY_ORDER) do
+    local value = self.probability[name]
+    range = 5
+    local scaled_value = value / 100 * range
+    local stripe_mod = inter_stripe_diff * (x % 2)
+    for i = 1, range do
+      local y = 8 - i
+      local brightness
+      if scaled_value > i then
+        brightness = 15 - stripe_mod
+      elseif scaled_value > i - 1 then
+        brightness = (15 - stripe_min - stripe_mod) * (scaled_value - (i - 1)) + stripe_mod + stripe_min
+      else
+        brightness = stripe_mod + stripe_min
+      end
+      g:led(top_x + x - 1, top_y + y, math.floor(brightness))
+    end
   end
 end
 

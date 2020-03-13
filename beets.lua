@@ -10,9 +10,14 @@ local BeatClock = require 'beatclock'
 local Beets = include('lib/libbeets')
 
 local beat_clock
-local beets = Beets.new(1)
+local beets = Beets.new{softcut_voice_id=1}
 
 local editing = false
+local g = grid.connect()
+
+g.key = function(x,y,z)
+  beets:grid_key(x,y,z)
+end
 
 local function init_crow()
   crow.output[1].action = 'pulse(0.001, 5, 1)'
@@ -39,6 +44,8 @@ local function init_beatclock(bpm)
                          beat_clock.step
     beets:advance_step(beatstep, beat_clock.bpm)
     redraw()
+    beets:drawGridUI(g, 1, 1)
+    g:refresh()
   end
 end
 
