@@ -7,7 +7,9 @@ local Formatters = require 'formatters'
 local BREAK_OFFSET = 5
 local VOICE_OFFSET = 100
 local EVENT_ORDER = {"<", ">", "R", "S", "B"}
-local PROBABILITY_ORDER = { "jump_back", "jump", "reverse", "stutter", "loop_index_jump" }
+local PROBABILITY_ORDER = {
+  "jump_back", "jump", "reverse", "stutter", "loop_index_jump"
+}
 local json = include("lib/json")
 local inspect = include("lib/inspect")
 
@@ -56,11 +58,7 @@ function Beets.new(options)
       jump_back = 0
     },
 
-    ui = {
-      slice_buttons_down = {},
-      mute_button = 0,
-      shift_button = 0
-    }
+    ui = {slice_buttons_down = {}, mute_button = 0, shift_button = 0}
   }
 
   setmetatable(i, Beets)
@@ -86,7 +84,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
     self.status = 'NO LOOPS'
     return
   end
-  
+
   if self.muted then
     self.status = 'MUTED'
     softcut.level(self.id, 0)
@@ -175,7 +173,6 @@ function Beets:play_slice(slice_index)
     self.events['R'] = 0
     softcut.rate(self.id, current_rate)
   end
-
 
   local position = loop.start +
                        (slice_index * (loop.duration / self.beat_count))
@@ -386,7 +383,7 @@ function Beets:add_params()
     name = self.id .. ": " .. 'Amplitude',
     controlspec = specs.AMP,
     default = 1.0,
-    action = function(value) 
+    action = function(value)
       self.amplitude = value
       softcut.level(self.id, self.amplitude)
     end
@@ -518,13 +515,11 @@ function Beets:_drawCurrentLoopGrid(options)
   end
 end
 
-function Beets:grid_key(x,y,z)
+function Beets:grid_key(x, y, z)
   if self.loop_count == 0 or self.editing then return end
   if x == 7 and y == 8 then
     self.ui.mute_button = z
-    if z == 0 then 
-      self:toggle_mute()
-    end
+    if z == 0 then self:toggle_mute() end
     redraw()
   end
   if x == 8 and y == 8 then
@@ -533,14 +528,12 @@ function Beets:grid_key(x,y,z)
   end
   if y == 1 and x <= self.beat_count then
     if self.ui.shift_button == 1 then
-      if z == 0 then
-        self.index = (x - 1) % self.beat_count
-      end
-    elseif z == 1 then 
-      self.ui.slice_buttons_down[x] = 1 
+      if z == 0 then self.index = (x - 1) % self.beat_count end
+    elseif z == 1 then
+      self.ui.slice_buttons_down[x] = 1
       local count = 0
       local first, second
-      for button_down in pairs(self.ui.slice_buttons_down) do 
+      for button_down in pairs(self.ui.slice_buttons_down) do
         if first == nil then
           first = button_down
         else
@@ -551,11 +544,11 @@ function Beets:grid_key(x,y,z)
             first = button_down
           end
         end
-        count = count + 1 
+        count = count + 1
       end
       if count == 1 then -- for double-tap single-button-loop handling
         if self.ui.slice_button_saved then
-          if self.ui.slice_button_saved == x then 
+          if self.ui.slice_button_saved == x then
             -- DOUBLE TAP!
             params:set(self.id .. "_" .. "beat_start", x - 1)
             params:set(self.id .. "_" .. "beat_end", x - 1)
@@ -575,11 +568,9 @@ function Beets:grid_key(x,y,z)
       if self.ui.slice_button_saved then
         local count = 0
         for _ in pairs(self.ui.slice_buttons_down) do count = count + 1 end
-        if count ~= 1 then
-          self.ui.slice_button_saved = nil
-        end
+        if count ~= 1 then self.ui.slice_button_saved = nil end
       end
-      self.ui.slice_buttons_down[x] = nil 
+      self.ui.slice_buttons_down[x] = nil
     end
   end
 
@@ -611,12 +602,10 @@ function Beets:drawGridUI(g, top_x, top_y)
   if self.ui.mute_button == 1 then
     mute_brightness = 15
   else
-    if self.muted then
-      mute_brightness = 12
-    end
+    if self.muted then mute_brightness = 12 end
   end
   g:led(top_x + 6, top_y + 7, mute_brightness)
-  
+
   -- beat (0-based)
   for i = 0, self.beat_count - 1 do
     if i == self.played_index then
@@ -650,7 +639,8 @@ function Beets:drawGridUI(g, top_x, top_y)
       if scaled_value > i then
         brightness = 15 - stripe_mod
       elseif scaled_value > i - 1 then
-        brightness = (15 - stripe_min - stripe_mod) * (scaled_value - (i - 1)) + stripe_mod + stripe_min
+        brightness = (15 - stripe_min - stripe_mod) * (scaled_value - (i - 1)) +
+                         stripe_mod + stripe_min
       else
         brightness = stripe_mod + stripe_min
       end

@@ -10,17 +10,17 @@ local BeatClock = require 'beatclock'
 local Beets = include('lib/libbeets')
 
 local beat_clock
-local beets = Beets.new{softcut_voice_id=1}
-local beets2 = Beets.new{softcut_voice_id=2}
+local beets = Beets.new {softcut_voice_id = 1}
+local beets2 = Beets.new {softcut_voice_id = 2}
 
 local editing = false
 local g = grid.connect()
 
-g.key = function(x,y,z)
+g.key = function(x, y, z)
   if x < 9 then
-    beets:grid_key(x,y,z)
+    beets:grid_key(x, y, z)
   else
-    beets2:grid_key(x-8,y,z)
+    beets2:grid_key(x - 8, y, z)
   end
 end
 
@@ -89,7 +89,7 @@ function init()
   beets.on_beat_one = function() crow.output[2]() end
   beets.on_kick = function() crow.output[3]() end
   beets.change_bpm = function(bpm) beat_clock:bpm_change(bpm) end
-  
+
   beets2.change_bpm = function(bpm) beat_clock:bpm_change(bpm) end
 
   beets:add_params()
