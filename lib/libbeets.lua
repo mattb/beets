@@ -142,7 +142,7 @@ function Beets:random_loop_index()
   local timeout = self.loop_count
   local l = math.random(self.loop_count)
   while timeout > 0 do
-    local loop = self.loops_by_filename[self.loop_index_to_filename[l]]
+    local loop = self:loop_at_index(l)
     if loop.enabled == 1 then return l end
     l = l + 1
     if l > self.loop_count then l = 1 end
@@ -159,8 +159,7 @@ function Beets:play_slice(slice_index)
   end
   self.played_loop_index = self.loop_index
 
-  local loop =
-      self.loops_by_filename[self.loop_index_to_filename[self.played_loop_index]]
+  local loop = self:loop_at_index(self.played_loop_index)
   local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
 
   if (self:should('stutter')) then
@@ -199,7 +198,7 @@ function Beets:notify_beat(beat_type)
 end
 
 function Beets:toggle_loop_enabled(index)
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  local loop = self:loop_at_index(index)
   if loop.enabled == 1 then 
     loop.enabled = 0 
   elseif loop.enabled == 0 then 
@@ -207,18 +206,18 @@ function Beets:toggle_loop_enabled(index)
   end
 end
 
-function Beets:toggle_index_enabled(index)
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
-  if loop.beat_enabled[index + 1] == 1 then 
-    loop.beat_enabled[index + 1] = 0 
-  elseif loop.beat_enabled[index + 1] == 0 then 
-    loop.beat_enabled[index + 1] = 1 
+function Beets:toggle_slice_enabled(slice_index)
+  local loop = self:loop_at_index(self.loop_index)
+  if loop.beat_enabled[slice_index + 1] == 1 then 
+    loop.beat_enabled[slice_index + 1] = 0 
+  elseif loop.beat_enabled[slice_index + 1] == 0 then 
+    loop.beat_enabled[slice_index + 1] = 1 
   end
 end
 
-function Beets:index_is_enabled(index)
-  local loop = self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
-  return loop.beat_enabled[index + 1] == 1
+function Beets:slice_is_enabled(slice_index)
+  local loop = self:loop_at_index(self.loop_index)
+  return loop.beat_enabled[slice_index + 1] == 1
 end
 
 function Beets:step_forward(index)
@@ -227,7 +226,7 @@ function Beets:step_forward(index)
   while timeout > 0 do
     new_index = new_index + 1
     if new_index > self.beat_end then new_index = self.beat_start end
-    if self:index_is_enabled(new_index) then return new_index end
+    if self:slice_is_enabled(new_index) then return new_index end
     timeout = timeout - 1
   end
   return 0
@@ -239,7 +238,7 @@ function Beets:step_backward(index)
   while timeout > 0 do
     new_index = new_index - 1
     if new_index < self.beat_start then new_index = self.beat_end end
-    if self:index_is_enabled(new_index) then return new_index end
+    if self:slice_is_enabled(new_index) then return new_index end
     timeout = timeout - 1
   end
   return 0
@@ -247,7 +246,7 @@ end
 
 function Beets:step_first()
   local new_index = self.beat_start
-  if self:index_is_enabled(new_index) then return new_index end
+  if self:slice_is_enabled(new_index) then return new_index end
   return self:step_forward(new_index)
 end
 
@@ -460,7 +459,10 @@ function Beets:add_params()
     id = self.id .. "_" .. 'loop_index',
     name = self.id .. ": " .. 'Sample',
     controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
-    action = function(value) self.loop_index = value end
+    action = function(value) 
+      self.loop_index = value 
+      self:loop_at_index(self.loop_index).enabled = 1
+    end
   }
 
   params:add{
@@ -594,7 +596,7 @@ function Beets:grid_key(x, y, z)
   end
   if y == 1 and x <= self.beat_count then
     if self.ui.shift_button == 1 then
-      if z == 1 then self:toggle_index_enabled(x - 1) end
+      if z == 1 then self:toggle_slice_enabled(x - 1) end
     elseif z == 1 then
       self.ui.slice_buttons_down[x] = 1
       local count = 0
@@ -643,7 +645,7 @@ function Beets:grid_key(x, y, z)
   -- print(x .. y .. z)
   if y == 2 and x <= self.loop_count then
     if self.ui.shift_button == 1 then
-      if z == 1 then self:toggle_loop_enabled(x) end
+      if z == 1 and x ~= self.loop_index then self:toggle_loop_enabled(x) end
     elseif z == 1 then 
       params:set(self.id .. "_" .. "loop_index", x) 
     end
@@ -678,7 +680,7 @@ function Beets:drawGridUI(g, top_x, top_y)
 
   -- beat (0-based)
   for i = 0, self.beat_count - 1 do
-    if self:index_is_enabled(i) then 
+    if self:slice_is_enabled(i) then 
       if i == self.played_index then
         g:led(top_x + i, top_y, 15)
       elseif i >= self.beat_start and i <= self.beat_end then
@@ -687,7 +689,7 @@ function Beets:drawGridUI(g, top_x, top_y)
         g:led(top_x + i, top_y, 3)
       end
     else
-      g:led(top_x + i, top_y, 0)
+      g:led(top_x + i, top_y, 1)
     end
   end
 
@@ -695,8 +697,10 @@ function Beets:drawGridUI(g, top_x, top_y)
   for i = 0, math.min(7, self.loop_count - 1) do
     if i == self.loop_index - 1 then
       g:led(top_x + i, top_y + 1, 15)
+    elseif self:loop_at_index(i + 1).enabled == 1 then
+      g:led(top_x + i, top_y + 1, 3)
     else
-      g:led(top_x + i, top_y + 1, 2)
+      g:led(top_x + i, top_y + 1, 1)
     end
   end
 
@@ -796,11 +800,14 @@ function Beets:edit_mode_begin()
   redraw()
 end
 
+function Beets:loop_at_index(index)
+  return self.loops_by_filename[self.loop_index_to_filename[index]]
+end
+
 function Beets:edit_mode_end()
   self.editing = false
   self.enable_mutations = true
-  local loop =
-      self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+  local loop = self:loop_at_index(self.loop_index)
   self:save_loop_info(loop)
   redraw()
 end
@@ -818,8 +825,7 @@ end
 function Beets:key(n, z)
   if n == 2 and z == 0 then
     local beat_types_index = math.floor(self.editing_mode.cursor_location) + 1
-    local loop =
-        self.loops_by_filename[self.loop_index_to_filename[self.loop_index]]
+    local loop = self:loop_at_index(self.loop_index)
     if loop.beat_types[beat_types_index] == " " then
       loop.beat_types[beat_types_index] = "K"
     elseif loop.beat_types[beat_types_index] == "K" then
