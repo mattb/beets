@@ -524,6 +524,19 @@ function Beets:add_params()
   }
 
   params:add {
+    type = 'control',
+    id = self.id .. '_' .. 'pan',
+    name = self.id .. ': ' .. 'Pan',
+    controlspec = ControlSpec.PAN,
+    formatter = Formatters.bipolar_as_pan_widget,
+    default = 0.5,
+    action = function(value)
+      self.pan = value
+      softcut.pan(self.id, self.pan)
+    end
+  }
+
+  params:add {
     type = 'option',
     id = self.id .. '_' .. 'auto_advance',
     name = self.id .. ': ' .. 'Auto-advance loop',
