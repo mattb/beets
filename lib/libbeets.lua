@@ -601,7 +601,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'loop_index_jump_probability',
-    name = self.id .. ': ' .. 'Break Index Jump Probability',
+    name = self.id .. ': ' .. 'Loop Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
