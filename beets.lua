@@ -9,7 +9,7 @@
 local BeatClock = require 'beatclock'
 local Beets = include('lib/libbeets')
 
-local Passthrough = include("lib/passthrough")
+local Passthrough = include('lib/passthrough')
 
 local beat_clock
 local beets = Beets.new {softcut_voice_id = 1}
@@ -59,10 +59,18 @@ function init_arc()
 end
 
 g.key = function(x, y, z)
-  if x < 9 then
-    beets:grid_key(x, y, z)
+  if params:get('orientation') == 1 then -- horizontal
+    if x < 9 then
+      beets:grid_key(x, y, z)
+    else
+      beets2:grid_key(x - 8, y, z)
+    end
   else
-    beets2:grid_key(x - 8, y, z)
+    if y < 9 then
+      beets:grid_key(x, y, z)
+    else
+      beets2:grid_key(x, y - 8, z)
+    end
   end
 end
 
@@ -97,7 +105,11 @@ local function init_beatclock(bpm)
     beets2:advance_step(beatstep, beat_clock.bpm)
     redraw()
     beets:drawGridUI(g, 1, 1)
-    beets2:drawGridUI(g, 9, 1)
+    if params:get('orientation') == 1 then -- horizontal
+      beets2:drawGridUI(g, 9, 1)
+    else
+      beets2:drawGridUI(g, 1, 9)
+    end
     g:refresh()
   end
 end
@@ -164,6 +176,20 @@ function init()
   beets2.change_bpm = function(bpm)
     beat_clock:bpm_change(bpm)
   end
+
+  params:add {
+    type = 'option',
+    id = 'orientation',
+    name = 'Grid orientation',
+    options = {'horizontal', 'vertical'},
+    action = function(val)
+      if val == 1 then
+        g:rotation(0)
+      else
+        g:rotation(3)
+      end
+    end
+  }
 
   beets:add_params()
   params:add_separator()
