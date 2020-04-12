@@ -1,17 +1,16 @@
 -- Beets
--- 0.1 @mattb
+-- 0.2 @mattb
 --
 -- Probabilistic performance
 -- drum loop resequencer
 --
 -- K2 : Quantized mute toggle
 -- K3 : Instant mute while held
-local BeatClock = require 'beatclock'
+
 local Beets = include('lib/libbeets')
 
 local Passthrough = include('lib/passthrough')
 
-local beat_clock
 local beets = Beets.new {softcut_voice_id = 1}
 local beets2 = Beets.new {softcut_voice_id = 2}
 
@@ -21,41 +20,47 @@ local g = grid.connect()
 local kick = 1
 local snare = 1
 
-function init_arc()
-  local a = arc.connect()
-  local ametro = metro.init()
-  ametro.time = 1 / 60
-  ametro.event = function()
-    if kick > 0 then
-      kick = kick - 0.05
-    end
-    if snare > 0 then
-      snare = snare - 0.05
-    end
-    local levels = {kick, snare}
-    for i, l in ipairs(levels) do
-      l = util.clamp(l, 0, 1)
-      for n = 1, 64 do
-        a:led(i + 2, n, math.floor(l * 15))
-      end
-    end
-    local beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
-    for i = 1, 64 do
-      local v = 4
-      if math.floor(1 + i / 8) == math.floor(1 + beatstep / 2) then
-        v = 15
-      end
-      a:led(1, i, v)
-
-      v = 4
-      if math.floor(i / 8) == beets.played_index then
-        v = 15
-      end
-      a:led(2, i, v)
-    end
-    a:refresh()
+local function update_arc(a, beat)
+  if kick > 0 then
+    kick = kick - 0.05
   end
-  return ametro
+  if snare > 0 then
+    snare = snare - 0.05
+  end
+  local levels = {kick, snare}
+  for i, l in ipairs(levels) do
+    l = util.clamp(l, 0, 1)
+    for n = 1, 64 do
+      a:led(i + 2, n, math.floor(l * 15))
+    end
+  end
+  for i = 1, 64 do
+    local v = 4
+    if math.floor(1 + i / 8) == math.floor(1 + beat / 2) then
+      v = 15
+    end
+    a:led(1, i, v)
+
+    v = 4
+    if math.floor(i / 8) == beets.played_index then
+      v = 15
+    end
+    a:led(2, i, v)
+  end
+  a:refresh()
+end
+
+local function init_arc()
+  local a = arc.connect()
+  clock.run(
+    function()
+      while true do
+        clock.sync(1 / 4)
+        local beatstep = math.floor(clock.get_time_beats() * 4) % 16
+        update_arc(a, beatstep)
+      end
+    end
+  )
 end
 
 g.key = function(x, y, z)
@@ -82,36 +87,38 @@ local function init_crow()
   crow.ii.pullup(true)
 end
 
-local function init_beatclock(bpm)
-  beat_clock = BeatClock.new()
-  beat_clock.ticks_per_step = 6
-  beat_clock.steps_per_beat = 4
-  beat_clock.on_select_internal = function()
-    beat_clock:start()
-  end
-  beat_clock.on_select_external = function()
-    print('external')
-  end
-  beat_clock:start()
-  beat_clock:bpm_change(bpm)
-  beat_clock:add_clock_params()
+local function set_bpm(bpm)
+  _norns.clock_internal_set_tempo(bpm)
+  _norns.clock_link_set_tempo(bpm)
+end
 
-  local clk_midi = midi.connect(1)
-  clk_midi.event = beat_clock.process_mid
+local function add_clock_params()
+  params:add_number('bpm', 'BPM', 1, 300, 120)
+  params:set_action('bpm', set_bpm)
+end
 
-  beat_clock.on_step = function()
-    local beatstep = beat_clock.steps_per_beat * beat_clock.beat + beat_clock.step
-    beets:advance_step(beatstep, beat_clock.bpm)
-    beets2:advance_step(beatstep, beat_clock.bpm)
-    redraw()
-    beets:drawGridUI(g, 1, 1)
-    if params:get('orientation') == 1 then -- horizontal
-      beets2:drawGridUI(g, 9, 1)
-    else
-      beets2:drawGridUI(g, 1, 9)
+local function init_clock(bpm)
+  add_clock_params()
+
+  clock.set_source(clock.LINK)
+  clock.run(
+    function()
+      while true do
+        clock.sync(1 / 4)
+        local beatstep = math.floor(clock.get_time_beats() * 4) % 16
+        beets:advance_step(beatstep, clock.get_tempo())
+        beets2:advance_step(beatstep, clock.get_tempo())
+        redraw()
+        beets:drawGridUI(g, 1, 1)
+        if params:get('orientation') == 1 then -- horizontal
+          beets2:drawGridUI(g, 9, 1)
+        else
+          beets2:drawGridUI(g, 1, 9)
+        end
+        g:refresh()
+      end
     end
-    g:refresh()
-  end
+  )
 end
 
 function redraw()
@@ -169,12 +176,13 @@ function init()
     snare = 1
     crow.output[4]()
   end
+
   beets.change_bpm = function(bpm)
-    beat_clock:bpm_change(bpm)
+    set_bpm(bpm)
   end
 
   beets2.change_bpm = function(bpm)
-    beat_clock:bpm_change(bpm)
+    set_bpm(bpm)
   end
 
   params:add {
@@ -196,12 +204,11 @@ function init()
   beets2:add_params()
   params:add_separator()
 
-  local bpm = 130
+  local bpm = 170
 
-  init_beatclock(bpm)
+  init_clock(bpm)
   init_crow()
   beets:start(bpm)
   beets2:start(bpm)
-  local ametro = init_arc()
-  ametro:start()
+  init_arc()
 end
