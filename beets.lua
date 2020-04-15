@@ -17,17 +17,17 @@ local beets2 = Beets.new {softcut_voice_id = 2}
 local editing = false
 local g = grid.connect()
 
-local kick = 1
-local snare = 1
+local arc_kick_counter = 1
+local arc_snare_counter = 1
 
 local function update_arc(a, beat)
-  if kick > 0 then
-    kick = kick - 0.05
+  if arc_kick_counter > 0 then
+    arc_kick_counter = arc_kick_counter - 0.05
   end
-  if snare > 0 then
-    snare = snare - 0.05
+  if arc_snare_counter > 0 then
+    arc_snare_counter = arc_snare_counter - 0.05
   end
-  local levels = {kick, snare}
+  local levels = {arc_kick_counter, arc_snare_counter}
   for i, l in ipairs(levels) do
     l = util.clamp(l, 0, 1)
     for n = 1, 64 do
@@ -98,8 +98,6 @@ local function add_clock_params()
 end
 
 local function init_clock(bpm)
-  add_clock_params()
-
   clock.set_source(clock.LINK)
   clock.run(
     function()
@@ -169,11 +167,11 @@ function init()
     crow.output[2]()
   end
   beets.on_kick = function()
-    kick = 1
+    arc_kick_counter = 1
     crow.output[3]()
   end
   beets.on_snare = function()
-    snare = 1
+    arc_snare_counter = 1
     crow.output[4]()
   end
 
@@ -184,6 +182,8 @@ function init()
   beets2.change_bpm = function(bpm)
     set_bpm(bpm)
   end
+
+  params:add_separator()
 
   params:add {
     type = 'option',
@@ -199,10 +199,11 @@ function init()
     end
   }
 
+  add_clock_params()
+
+  params:add_separator()
   beets:add_params()
-  params:add_separator()
   beets2:add_params()
-  params:add_separator()
 
   local bpm = 170
 

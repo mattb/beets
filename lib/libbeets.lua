@@ -475,10 +475,12 @@ function Beets:add_params()
     self.loops_folder_name = files[1]
   end
 
+  params:add_group("BEETS VOICE " .. self.id, 17)
+
   params:add {
     type = 'option',
     id = self.id .. '_' .. 'dir_chooser',
-    name = self.id .. ': ' .. name,
+    name = name,
     options = files,
     action = function(value)
       self.loops_folder_name = files[value]
@@ -488,7 +490,7 @@ function Beets:add_params()
   params:add {
     type = 'number',
     id = self.id .. '_' .. 'dir_bpm',
-    name = self.id .. ': ' .. 'Loops BPM',
+    name = 'Loops BPM',
     min = 1,
     max = 300,
     default = self.initial_bpm,
@@ -500,7 +502,7 @@ function Beets:add_params()
   params:add {
     type = 'trigger',
     id = self.id .. '_' .. 'load_loops',
-    name = self.id .. ': ' .. 'Load loops',
+    name = 'Load loops',
     action = function(value)
       if value == '-' then
         return
@@ -514,7 +516,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'amplitude',
-    name = self.id .. ': ' .. 'Amplitude',
+    name = 'Amplitude',
     controlspec = specs.AMP,
     default = 1.0,
     action = function(value)
@@ -526,7 +528,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'pan',
-    name = self.id .. ': ' .. 'Pan',
+    name = 'Pan',
     controlspec = ControlSpec.PAN,
     formatter = Formatters.bipolar_as_pan_widget,
     default = 0.5,
@@ -539,14 +541,14 @@ function Beets:add_params()
   params:add {
     type = 'option',
     id = self.id .. '_' .. 'auto_advance',
-    name = self.id .. ': ' .. 'Auto-advance loop',
+    name = 'Auto-advance loop',
     options = {'off', 'on'}
   }
 
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'loop_index',
-    name = self.id .. ': ' .. 'Sample',
+    name = 'Sample',
     controlspec = ControlSpec.new(1, self.loop_count, 'lin', 1, 1, ''),
     action = function(value)
       self.loop_index = value
@@ -557,7 +559,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'jump_back_probability',
-    name = self.id .. ': ' .. 'Jump Back Probability',
+    name = 'Jump Back Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
@@ -568,7 +570,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'jump_probability',
-    name = self.id .. ': ' .. 'Jump Probability',
+    name = 'Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
@@ -579,7 +581,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'reverse_probability',
-    name = self.id .. ': ' .. 'Reverse Probability',
+    name = 'Reverse Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
@@ -590,7 +592,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'stutter_probability',
-    name = self.id .. ': ' .. 'Stutter Probability',
+    name = 'Stutter Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
@@ -601,7 +603,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'loop_index_jump_probability',
-    name = self.id .. ': ' .. 'Loop Jump Probability',
+    name = 'Loop Jump Probability',
     controlspec = specs.PERCENTAGE,
     formatter = Formatters.percentage,
     action = function(value)
@@ -612,7 +614,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'filter_frequency',
-    name = self.id .. ': ' .. 'Filter Cutoff',
+    name = 'Filter Cutoff',
     controlspec = specs.FILTER_FREQ,
     formatter = Formatters.format_freq,
     action = function(value)
@@ -623,7 +625,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'filter_reso',
-    name = self.id .. ': ' .. 'Filter Resonance',
+    name = 'Filter Resonance',
     controlspec = specs.FILTER_RESONANCE,
     action = function(value)
       softcut.post_filter_rq(self.id, value)
@@ -633,7 +635,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'beat_start',
-    name = self.id .. ': ' .. 'Beat Start',
+    name = 'Beat Start',
     controlspec = specs.BEAT_START,
     action = function(value)
       self.beat_start = value
@@ -643,7 +645,7 @@ function Beets:add_params()
   params:add {
     type = 'control',
     id = self.id .. '_' .. 'beat_end',
-    name = self.id .. ': ' .. 'Beat End',
+    name = 'Beat End',
     controlspec = specs.BEAT_END,
     action = function(value)
       self.beat_end = value
