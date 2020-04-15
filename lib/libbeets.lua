@@ -703,18 +703,18 @@ function Beets:grid_key(x, y, z)
   if self.loop_count == 0 or self.editing then
     return
   end
-  if x == 7 and y == 8 then
+  if x == 8 and y == 8 then
     self.ui.mute_button = z
     if z == 0 then
       self:toggle_mute()
     end
     redraw()
   end
-  if x == 8 and y == 8 then
+  if x == 1 and y == 3 then
     self.ui.shift_button = z
     redraw()
   end
-  if z == 1 and x == 8 and y == 7 then -- auto_advance
+  if z == 1 and x == 8 and y == 3 then -- auto_advance
     local current_auto_advance = params:get(self.id .. '_' .. 'auto_advance')
     if current_auto_advance == 1 then
       params:set(self.id .. '_' .. 'auto_advance', 2)
@@ -804,16 +804,16 @@ function Beets:drawGridUI(g, top_x, top_y)
 
   -- auto-advance
   if params:get(self.id .. '_' .. 'auto_advance') == 2 then
-    g:led(top_x + 7, top_y + 6, 15)
+    g:led(top_x + 7, top_y + 2, 15)
   else
-    g:led(top_x + 7, top_y + 6, 4)
+    g:led(top_x + 7, top_y + 2, 4)
   end
 
   -- shift
   if self.ui.shift_button == 1 then
-    g:led(top_x + 7, top_y + 7, 15)
+    g:led(top_x + 0, top_y + 2, 15)
   else
-    g:led(top_x + 7, top_y + 7, 4)
+    g:led(top_x + 0, top_y + 2, 4)
   end
 
   local mute_brightness = 4
@@ -824,7 +824,7 @@ function Beets:drawGridUI(g, top_x, top_y)
       mute_brightness = 12
     end
   end
-  g:led(top_x + 6, top_y + 7, mute_brightness)
+  g:led(top_x + 7, top_y + 7, mute_brightness)
 
   -- beat (0-based)
   for i = 0, self.beat_count - 1 do
