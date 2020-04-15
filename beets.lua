@@ -55,7 +55,7 @@ local function init_arc()
   clock.run(
     function()
       while true do
-        clock.sync(1 / 4)
+        clock.sleep(1/60)
         local beatstep = math.floor(clock.get_time_beats() * 4) % 16
         update_arc(a, beatstep)
       end
