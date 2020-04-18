@@ -1,0 +1,8 @@
+# exclude .gitignore and similar from the generated tarball
+.git* export-ignore
+# dev files
+.lua* export-ignore
+.vscode export-ignore
+# docs
+*.ai export-ignore
+docs export-ignore
