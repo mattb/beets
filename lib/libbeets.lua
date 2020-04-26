@@ -25,7 +25,6 @@ function Beets.new(options)
     enable_mutations = true,
     id = softcut_voice_id,
     beat_count = 8,
-    native_bpm = 130,
     loops_by_filename = {},
     loop_index_to_filename = {},
     loop_count = 0,
@@ -98,7 +97,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   if self.editing then
     -- play the current edit position slice every other beat
     -- so that it's easier to hear what the sound is at the start of the slice
-    if self.beatstep % 2 == 0 then
+    if self.beatstep % 4 ~= 0 then
       self:play_nothing()
     else
       local edit_index = math.floor(self.editing_mode.cursor_location)
@@ -171,7 +170,7 @@ function Beets:play_slice(slice_index)
   self.played_loop_index = self.loop_index
 
   local loop = self:loop_at_index(self.played_loop_index)
-  local current_rate = loop.rate * (self.current_bpm / self.native_bpm)
+  local current_rate = loop.rate * (self.current_bpm / loop.bpm)
 
   if (self:should('stutter')) then
     self.events['S'] = 1
@@ -333,7 +332,6 @@ end
 
 function Beets:load_directory(path, bpm)
   self:clear_loops()
-  self.native_bpm = bpm
 
   local f = io.popen('ls ' .. path .. '/*.wav')
   local filenames = {}
@@ -389,6 +387,7 @@ function Beets:load_loop(index, loop)
     self:save_loop_info(loop_info)
   end
 
+  loop_info.bpm = (4 * 60) / loop_info.duration
   loop_info.start = index * BREAK_OFFSET + self.id * VOICE_OFFSET
   loop_info.index = index
   loop_info.enabled = 1
@@ -421,8 +420,7 @@ function Beets:softcut_init()
   softcut.post_filter_fc(self.id, 44100)
 end
 
-function Beets:start(in_bpm)
-  self.native_bpm = in_bpm
+function Beets:start()
   self:softcut_init()
   self.running = true
 end
@@ -468,7 +466,7 @@ function Beets:add_params()
     self.loops_folder_name = files[1]
   end
 
-  params:add_group('BEETS VOICE ' .. self.id, 17)
+  params:add_group('Voice ' .. self.id, 16)
 
   params:add {
     type = 'option',
@@ -478,15 +476,6 @@ function Beets:add_params()
     action = function(value)
       self.loops_folder_name = files[value]
     end
-  }
-
-  params:add {
-    type = 'number',
-    id = self.id .. '_' .. 'dir_bpm',
-    name = 'Loops native BPM',
-    min = 1,
-    max = 300,
-    default = self.native_bpm
   }
 
   params:add {
@@ -961,7 +950,7 @@ function Beets:edit_mode_end()
 end
 
 function Beets:enc(n, d)
-  if n == 2 then
+  if n == 1 then
     self.editing_mode.cursor_location = (self.editing_mode.cursor_location + (d / 50.0)) % self.beat_count
     redraw()
   else

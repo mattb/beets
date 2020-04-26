@@ -56,7 +56,7 @@ local function init_arc()
     function()
       while true do
         clock.sleep(1 / 60)
-        local beatstep = math.floor(clock.get_beats() * 4) % 16
+        local beatstep = math.floor(clock.get_beats() * 2) % 8
         update_arc(a, beatstep)
       end
     end
@@ -89,9 +89,8 @@ end
 
 local function beat()
   while true do
-    clock.sync(1 / 8)
-    local beatstep = math.floor(clock.get_beats() * 8) % 8
-    print('CLOCK BEATS:' .. clock.get_beats() .. ' BEATSTEP: ' .. beatstep .. ' TEMPO: ' .. clock.get_tempo())
+    clock.sync(1 / 2)
+    local beatstep = math.floor(clock.get_beats() * 2) % 8
     beets:advance_step(beatstep, clock.get_tempo())
     beets2:advance_step(beatstep, clock.get_tempo())
     redraw()
@@ -142,8 +141,7 @@ function key(n, z)
 end
 
 function init()
-  Passthrough.init()
-  params:add_separator()
+  params:add_separator('BEETS')
 
   audio.level_cut_rev(0)
 
@@ -178,9 +176,13 @@ function init()
   beets:add_params()
   beets2:add_params()
 
-  clock.run(beat)
+  params:add_separator('UTILITIES')
+  Passthrough.init()
 
+  clock.run(beat)
   init_crow()
-  beets2:start(clock.get_tempo())
   init_arc()
+
+  beets:start()
+  beets2:start()
 end
