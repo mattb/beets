@@ -1,11 +1,20 @@
 -- Beets
--- 0.2 @mattb
+-- 1.0 @mattb
 --
 -- Probabilistic performance
--- drum loop resequencer
+-- drum loop re-sequencer
 --
+-- Put one-bar WAVs in folders
+-- in dust/audio/beets
+--
+-- K1 : Hold for edit mode
 -- K2 : Quantized mute toggle
 -- K3 : Instant mute while held
+--
+-- Use a Grid, or map
+-- MIDI controller to params
+
+local ENABLE_CROW = false -- not finished, and may stomp over clock Crow controls if enabled
 
 local Beets = include('lib/libbeets')
 
@@ -80,11 +89,9 @@ g.key = function(x, y, z)
 end
 
 local function init_crow()
-  crow.output[1].action = 'pulse(0.001, 5, 1)'
   crow.output[2].action = 'pulse(0.001, 5, 1)'
   crow.output[3].action = 'pulse(0.001, 5, 1)'
   crow.output[4].action = 'pulse(0.001, 5, 1)'
-  crow.ii.pullup(true)
 end
 
 local function beat()
@@ -147,16 +154,18 @@ function init()
 
   beets.on_beat = function()
   end
-  beets.on_beat_one = function()
-    crow.output[2]()
-  end
-  beets.on_kick = function()
-    arc_kick_counter = 1
-    crow.output[3]()
-  end
-  beets.on_snare = function()
-    arc_snare_counter = 1
-    crow.output[4]()
+  if ENABLE_CROW then
+    beets.on_beat_one = function()
+      crow.output[2]()
+    end
+    beets.on_kick = function()
+      arc_kick_counter = 1
+      crow.output[3]()
+    end
+    beets.on_snare = function()
+      arc_snare_counter = 1
+      crow.output[4]()
+    end
   end
 
   params:add {
@@ -180,7 +189,9 @@ function init()
   Passthrough.init()
 
   clock.run(beat)
-  init_crow()
+  if ENABLE_CROW then
+    init_crow()
+  end
   init_arc()
 
   beets:start()
