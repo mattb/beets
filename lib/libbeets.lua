@@ -83,7 +83,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   end
 
   if self.loop_count == 0 then
-    self.status = 'NO LOOPS'
+    self.status = 'LOAD LOOPS IN PARAMS'
     return
   end
 
