@@ -25,7 +25,7 @@ function Beets.new(options)
     enable_mutations = true,
     id = softcut_voice_id,
     beat_count = 8,
-    initial_bpm = 130,
+    native_bpm = 130,
     loops_by_filename = {},
     loop_index_to_filename = {},
     loop_count = 0,
@@ -53,8 +53,6 @@ function Beets.new(options)
     end,
     on_snare = function()
     end,
-    change_bpm = function()
-    end,
     -- probability values
     probability = {
       loop_index_jump = 0,
@@ -75,7 +73,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self.events = {}
   self.message = ''
   self.status = ''
-  self.beatstep = math.floor(in_beatstep / 2)
+  self.beatstep = in_beatstep
   self.current_bpm = in_bpm
 
   self.played_index = self.index
@@ -97,26 +95,22 @@ function Beets:advance_step(in_beatstep, in_bpm)
     softcut.level(self.id, self.amplitude)
   end
 
-  self.on_beat()
-  if in_beatstep % 2 == 0 then -- we get 16 steps per bar but we only want to act on 8 steps
-    if self.editing then
-      -- play the current edit position slice every other beat
-      -- so that it's easier to hear what the sound is at the start of the slice
-      if self.beatstep % 2 == 0 then
-        self:play_nothing()
-      else
-        local edit_index = math.floor(self.editing_mode.cursor_location)
-        self:play_slice(edit_index)
-      end
-      return
+  if self.editing then
+    -- play the current edit position slice every other beat
+    -- so that it's easier to hear what the sound is at the start of the slice
+    if self.beatstep % 2 == 0 then
+      self:play_nothing()
+    else
+      local edit_index = math.floor(self.editing_mode.cursor_location)
+      self:play_slice(edit_index)
     end
-    if self.beatstep == 0 then
-      self.on_beat_one()
-    end
-    self:play_slice(self.index)
-  else
-    self:calculate_next_slice()
+    return
   end
+  if self.beatstep == 0 then
+    self.on_beat_one()
+  end
+  self:calculate_next_slice()
+  self:play_slice(self.index)
 end
 
 function Beets:instant_toggle_mute()
@@ -177,7 +171,7 @@ function Beets:play_slice(slice_index)
   self.played_loop_index = self.loop_index
 
   local loop = self:loop_at_index(self.played_loop_index)
-  local current_rate = loop.rate * (self.current_bpm / self.initial_bpm)
+  local current_rate = loop.rate * (self.current_bpm / self.native_bpm)
 
   if (self:should('stutter')) then
     self.events['S'] = 1
@@ -339,8 +333,7 @@ end
 
 function Beets:load_directory(path, bpm)
   self:clear_loops()
-  self.initial_bpm = bpm
-  self.change_bpm(bpm)
+  self.native_bpm = bpm
 
   local f = io.popen('ls ' .. path .. '/*.wav')
   local filenames = {}
@@ -429,7 +422,7 @@ function Beets:softcut_init()
 end
 
 function Beets:start(in_bpm)
-  self.initial_bpm = in_bpm
+  self.native_bpm = in_bpm
   self:softcut_init()
   self.running = true
 end
@@ -475,7 +468,7 @@ function Beets:add_params()
     self.loops_folder_name = files[1]
   end
 
-  params:add_group("BEETS VOICE " .. self.id, 17)
+  params:add_group('BEETS VOICE ' .. self.id, 17)
 
   params:add {
     type = 'option',
@@ -490,13 +483,10 @@ function Beets:add_params()
   params:add {
     type = 'number',
     id = self.id .. '_' .. 'dir_bpm',
-    name = 'Loops BPM',
+    name = 'Loops native BPM',
     min = 1,
     max = 300,
-    default = self.initial_bpm,
-    action = function(value)
-      self.initial_bpm = value
-    end
+    default = self.native_bpm
   }
 
   params:add {
@@ -507,7 +497,10 @@ function Beets:add_params()
       if value == '-' then
         return
       end
-      self:load_directory(_path.dust .. 'audio/beets/' .. self.loops_folder_name, self.initial_bpm)
+      self:load_directory(
+        _path.dust .. 'audio/beets/' .. self.loops_folder_name,
+        params:get(self.id .. '_' .. 'dir_bpm')
+      )
     end
   }
 

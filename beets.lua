@@ -55,8 +55,8 @@ local function init_arc()
   clock.run(
     function()
       while true do
-        clock.sleep(1/60)
-        local beatstep = math.floor(clock.get_time_beats() * 4) % 16
+        clock.sleep(1 / 60)
+        local beatstep = math.floor(clock.get_beats() * 4) % 16
         update_arc(a, beatstep)
       end
     end
@@ -87,36 +87,22 @@ local function init_crow()
   crow.ii.pullup(true)
 end
 
-local function set_bpm(bpm)
-  _norns.clock_internal_set_tempo(bpm)
-  _norns.clock_link_set_tempo(bpm)
-end
-
-local function add_clock_params()
-  params:add_number('bpm', 'BPM', 1, 300, 120)
-  params:set_action('bpm', set_bpm)
-end
-
-local function init_clock(bpm)
-  clock.set_source(clock.LINK)
-  clock.run(
-    function()
-      while true do
-        clock.sync(1 / 4)
-        local beatstep = math.floor(clock.get_time_beats() * 4) % 16
-        beets:advance_step(beatstep, clock.get_tempo())
-        beets2:advance_step(beatstep, clock.get_tempo())
-        redraw()
-        beets:drawGridUI(g, 1, 1)
-        if params:get('orientation') == 1 then -- horizontal
-          beets2:drawGridUI(g, 9, 1)
-        else
-          beets2:drawGridUI(g, 1, 9)
-        end
-        g:refresh()
-      end
+local function beat()
+  while true do
+    clock.sync(1 / 8)
+    local beatstep = math.floor(clock.get_beats() * 8) % 8
+    print('CLOCK BEATS:' .. clock.get_beats() .. ' BEATSTEP: ' .. beatstep .. ' TEMPO: ' .. clock.get_tempo())
+    beets:advance_step(beatstep, clock.get_tempo())
+    beets2:advance_step(beatstep, clock.get_tempo())
+    redraw()
+    beets:drawGridUI(g, 1, 1)
+    if params:get('orientation') == 1 then -- horizontal
+      beets2:drawGridUI(g, 9, 1)
+    else
+      beets2:drawGridUI(g, 1, 9)
     end
-  )
+    g:refresh()
+  end
 end
 
 function redraw()
@@ -157,11 +143,11 @@ end
 
 function init()
   Passthrough.init()
+  params:add_separator()
 
   audio.level_cut_rev(0)
 
   beets.on_beat = function()
-    crow.output[1]()
   end
   beets.on_beat_one = function()
     crow.output[2]()
@@ -174,16 +160,6 @@ function init()
     arc_snare_counter = 1
     crow.output[4]()
   end
-
-  beets.change_bpm = function(bpm)
-    set_bpm(bpm)
-  end
-
-  beets2.change_bpm = function(bpm)
-    set_bpm(bpm)
-  end
-
-  params:add_separator()
 
   params:add {
     type = 'option',
@@ -199,17 +175,12 @@ function init()
     end
   }
 
-  add_clock_params()
-
-  params:add_separator()
   beets:add_params()
   beets2:add_params()
 
-  local bpm = 170
+  clock.run(beat)
 
-  init_clock(bpm)
   init_crow()
-  beets:start(bpm)
-  beets2:start(bpm)
+  beets2:start(clock.get_tempo())
   init_arc()
 end
