@@ -330,7 +330,7 @@ function Beets:clear_loops()
   self.loop_count = 0
 end
 
-function Beets:load_directory(path, bpm)
+function Beets:load_directory(path)
   self:clear_loops()
 
   local f = io.popen('ls ' .. path .. '/*.wav')
@@ -487,8 +487,7 @@ function Beets:add_params()
         return
       end
       self:load_directory(
-        _path.dust .. 'audio/beets/' .. self.loops_folder_name,
-        params:get(self.id .. '_' .. 'dir_bpm')
+        _path.dust .. 'audio/beets/' .. self.loops_folder_name
       )
     end
   }
