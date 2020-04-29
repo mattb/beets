@@ -197,6 +197,7 @@ function init()
       else
         g:rotation(3)
       end
+      g:all(0) -- clear the grid for a full redraw after orientation change
     end
   }
 
