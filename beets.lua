@@ -17,6 +17,7 @@
 local ENABLE_CROW = false -- not finished, and may stomp over clock Crow controls if enabled
 
 local Beets = include('lib/libbeets')
+local beets_audio_dir = _path.audio .. 'beets'
 
 local Passthrough = include('lib/passthrough')
 
@@ -147,7 +148,24 @@ function key(n, z)
   end
 end
 
+function init_beets_dir()
+  if util.file_exists(beets_audio_dir) == false then
+    util.make_dir(beets_audio_dir)
+    local demodir = _path.code .. 'beets/demo-loops'
+    if util.file_exists(demodir) then
+      for _, dirname in ipairs(util.scandir(demodir)) do
+        local from_dir = demodir .. '/' .. dirname
+        local to_dir = beets_audio_dir .. '/' .. dirname
+        util.make_dir(to_dir)
+        util.os_capture('cp ' .. from_dir .. '* ' .. to_dir)
+      end
+    end
+  end
+end
+
 function init()
+  init_beets_dir()
+
   params:add_separator('BEETS')
 
   audio.level_cut_rev(0)

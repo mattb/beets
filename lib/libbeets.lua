@@ -449,7 +449,7 @@ function Beets:add_params()
 
   local files = {}
   local files_count = 0
-  local loops_dir = _path.dust .. 'audio/beets/'
+  local loops_dir = _path.audio .. 'beets/'
   local f = io.popen('cd ' .. loops_dir .. '; ls -d *')
   for name in f:lines() do
     table.insert(files, name)
@@ -486,9 +486,7 @@ function Beets:add_params()
       if value == '-' then
         return
       end
-      self:load_directory(
-        _path.dust .. 'audio/beets/' .. self.loops_folder_name
-      )
+      self:load_directory(_path.audio .. 'beets/' .. self.loops_folder_name)
     end
   }
 
