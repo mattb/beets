@@ -438,7 +438,7 @@ function Beets:reset_loop_index_param()
   end
 end
 
-function Beets:add_params()
+function Beets:add_params(arcify)
   local specs = {}
   specs.AMP = ControlSpec.new(0, 1, 'lin', 0, 1, '')
   specs.FILTER_FREQ = ControlSpec.new(20, 20000, 'exp', 0, 20000, 'Hz')
@@ -503,6 +503,7 @@ function Beets:add_params()
       softcut.level(self.id, self.amplitude)
     end
   }
+  arcify:register(self.id .. '_' .. 'amplitude')
 
   params:add {
     type = 'control',
@@ -516,6 +517,7 @@ function Beets:add_params()
       softcut.pan(self.id, self.pan)
     end
   }
+  arcify:register(self.id .. '_' .. 'pan')
 
   params:add {
     type = 'option',
@@ -534,6 +536,7 @@ function Beets:add_params()
       self:loop_at_index(self.loop_index).enabled = 1
     end
   }
+  arcify:register(self.id .. '_' .. 'loop_index', 0.05)
 
   params:add {
     type = 'control',
@@ -545,6 +548,7 @@ function Beets:add_params()
       self.probability.jump_back = value * 100
     end
   }
+  arcify:register(self.id .. '_' .. 'jump_back_probability')
 
   params:add {
     type = 'control',
@@ -556,6 +560,7 @@ function Beets:add_params()
       self.probability.jump = value * 100
     end
   }
+  arcify:register(self.id .. '_' .. 'jump_probability')
 
   params:add {
     type = 'control',
@@ -567,6 +572,7 @@ function Beets:add_params()
       self.probability.reverse = value * 100
     end
   }
+  arcify:register(self.id .. '_' .. 'reverse_probability')
 
   params:add {
     type = 'control',
@@ -578,6 +584,7 @@ function Beets:add_params()
       self.probability.stutter = value * 100
     end
   }
+  arcify:register(self.id .. '_' .. 'stutter_probability')
 
   params:add {
     type = 'control',
@@ -589,6 +596,7 @@ function Beets:add_params()
       self.probability.loop_index_jump = value * 100
     end
   }
+  arcify:register(self.id .. '_' .. 'loop_index_jump_probability')
 
   params:add {
     type = 'control',
@@ -600,6 +608,7 @@ function Beets:add_params()
       softcut.post_filter_fc(self.id, value)
     end
   }
+  arcify:register(self.id .. '_' .. 'filter_frequency', 10.0)
 
   params:add {
     type = 'control',
@@ -610,6 +619,7 @@ function Beets:add_params()
       softcut.post_filter_rq(self.id, value)
     end
   }
+  arcify:register(self.id .. '_' .. 'filter_reso', 0.1)
 
   params:add {
     type = 'control',
@@ -620,6 +630,7 @@ function Beets:add_params()
       self.beat_start = value
     end
   }
+  arcify:register(self.id .. '_' .. 'beat_start', 0.05)
 
   params:add {
     type = 'control',
@@ -630,6 +641,7 @@ function Beets:add_params()
       self.beat_end = value
     end
   }
+  arcify:register(self.id .. '_' .. 'beat_end', 0.05)
 end
 
 local layout = {

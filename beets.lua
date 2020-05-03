@@ -20,58 +20,14 @@ local Beets = include('lib/libbeets')
 local beets_audio_dir = _path.audio .. 'beets'
 
 local Passthrough = include('lib/passthrough')
+local Arcify = include('lib/arcify')
+local arcify = Arcify.new()
 
 local beets = Beets.new {softcut_voice_id = 1}
 local beets2 = Beets.new {softcut_voice_id = 2}
 
 local editing = false
 local g = grid.connect()
-
-local arc_kick_counter = 1
-local arc_snare_counter = 1
-
-local function update_arc(a, beat)
-  if arc_kick_counter > 0 then
-    arc_kick_counter = arc_kick_counter - 0.05
-  end
-  if arc_snare_counter > 0 then
-    arc_snare_counter = arc_snare_counter - 0.05
-  end
-  local levels = {arc_kick_counter, arc_snare_counter}
-  for i, l in ipairs(levels) do
-    l = util.clamp(l, 0, 1)
-    for n = 1, 64 do
-      a:led(i + 2, n, math.floor(l * 15))
-    end
-  end
-  for i = 1, 64 do
-    local v = 4
-    if math.floor(1 + i / 8) == math.floor(1 + beat / 2) then
-      v = 15
-    end
-    a:led(1, i, v)
-
-    v = 4
-    if math.floor(i / 8) == beets.played_index then
-      v = 15
-    end
-    a:led(2, i, v)
-  end
-  a:refresh()
-end
-
-local function init_arc()
-  local a = arc.connect()
-  clock.run(
-    function()
-      while true do
-        clock.sleep(1 / 60)
-        local beatstep = math.floor(clock.get_beats() * 2) % 8
-        update_arc(a, beatstep)
-      end
-    end
-  )
-end
 
 g.key = function(x, y, z)
   if params:get('orientation') == 1 then -- horizontal
@@ -177,11 +133,9 @@ function init()
       crow.output[2]()
     end
     beets.on_kick = function()
-      arc_kick_counter = 1
       crow.output[3]()
     end
     beets.on_snare = function()
-      arc_snare_counter = 1
       crow.output[4]()
     end
   end
@@ -201,8 +155,9 @@ function init()
     end
   }
 
-  beets:add_params()
-  beets2:add_params()
+  beets:add_params(arcify)
+  beets2:add_params(arcify)
+  arcify:add_params()
 
   params:add_separator('UTILITIES')
   Passthrough.init()
@@ -211,7 +166,6 @@ function init()
   if ENABLE_CROW then
     init_crow()
   end
-  init_arc()
 
   beets:start()
   beets2:start()
