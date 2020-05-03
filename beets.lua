@@ -157,10 +157,10 @@ function init()
 
   beets:add_params(arcify)
   beets2:add_params(arcify)
-  arcify:add_params()
 
   params:add_separator('UTILITIES')
   Passthrough.init()
+  arcify:add_params()
 
   clock.run(beat)
   if ENABLE_CROW then
