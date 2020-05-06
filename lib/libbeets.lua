@@ -21,6 +21,7 @@ function Beets.new(options)
   local softcut_voice_id = options.softcut_voice_id or 1
   local i = {
     -- descriptive global state
+    debug = false,
     running = false,
     enable_mutations = true,
     id = softcut_voice_id,
@@ -75,8 +76,6 @@ function Beets:advance_step(in_beatstep, in_bpm)
   self.beatstep = in_beatstep
   self.current_bpm = in_bpm
 
-  self.played_index = self.index
-
   if not self.running then
     self.status = 'NOT RUNNING'
     return
@@ -110,6 +109,7 @@ function Beets:advance_step(in_beatstep, in_bpm)
   end
   self:calculate_next_slice()
   self:play_slice(self.index)
+  self.played_index = self.index
 end
 
 function Beets:instant_toggle_mute()
@@ -318,7 +318,7 @@ function Beets:calculate_next_slice()
     self.events['<'] = 0
   end
 
-  if (self.beatstep == self.beat_count - 1) then
+  if (self.beatstep == 0) then
     new_index = self:step_first()
   end
   self.index = new_index
@@ -865,6 +865,15 @@ function Beets:drawGridUI(g, top_x, top_y)
   end
 end
 
+function Beets:drawDebugUI()
+  screen.clear()
+  screen.level(15)
+  for i, k in ipairs({'beatstep', 'index'}) do
+    screen.move(0, 7 * i)
+    screen.text(k .. ': ' .. self[k])
+  end
+end
+
 function Beets:drawPlaybackUI()
   screen.clear()
   screen.level(15)
@@ -932,11 +941,14 @@ function Beets:drawUI()
   screen.clear()
   screen.level(15)
 
-  if self.editing then
+  if self.debug then
+    self:drawDebugUI()
+  elseif self.editing then
     self:drawEditingUI()
   else
     self:drawPlaybackUI()
   end
+
   screen.update()
 end
 
