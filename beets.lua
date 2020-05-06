@@ -1,5 +1,5 @@
 -- Beets
--- 1.0 @mattb
+-- 1.1.1 @mattbiddulph
 --
 -- Probabilistic performance
 -- drum loop re-sequencer
@@ -7,12 +7,14 @@
 -- Put one-bar WAVs in folders
 -- in dust/audio/beets
 --
--- K1 : Hold for edit mode
 -- K2 : Quantized mute toggle
 -- K3 : Instant mute while held
 --
 -- Use a Grid, or map
 -- MIDI controller to params
+--
+-- thanks to @vcvcvc_val
+-- for demo loops!
 
 local ENABLE_CROW = false -- not finished, and may stomp over clock Crow controls if enabled
 
