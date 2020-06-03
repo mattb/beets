@@ -3,14 +3,14 @@
 -- library for passing midi
 -- from device to an interface
 -- + clocking from interface
+-- + scale quantizing
 --
 -- for how to use see example
 --
--- built with keystep in mind
 -- PRs welcome
 
 local Passthrough = {}
-
+local tab = require "tabutil"
 local MusicUtil = require "musicutil"
 local devices = {}
 local midi_device
@@ -22,13 +22,16 @@ local current_scale = {}
 local midi_notes = {}
 
 function Passthrough.device_event(data)
+    if #data == 0 then
+        return
+    end
     local msg = midi.to_msg(data)
     local dev_channel_param = params:get("device_channel")
     local int_channel_param = params:get("interface_channel")
 
-    local int_chan = (int_channel_param == 1 and 1) or int_channel_param - 1
+    local int_chan = (int_channel_param == 1 and 1) or int_channel_param
 
-    if dev_channel_param == 1 or (dev_channel_param > 1 and msg.ch == dev_channel_param - 1) then
+    if msg and msg.ch == dev_channel_param then
         local note = msg.note
         if msg.note ~= nil then
             if quantize_midi == true then
@@ -75,21 +78,28 @@ function Passthrough.build_scale()
     current_scale = MusicUtil.generate_scale_of_length(params:get("root_note"), params:get("scale_mode"), 128)
 end
 
+function getAvailableMidi()
+    d = {}
+    for id, device in pairs(midi.vports) do
+        d[id] = device.name
+    end
+    return d
+end
+
 function Passthrough.init()
     for i = 1, #MusicUtil.SCALES do
         table.insert(scale_names, string.lower(MusicUtil.SCALES[i].name))
     end
 
-    midi_device = midi.connect(1)
-    midi_device.event = device_event
-    midi_interface = midi.connect(2)
-    midi_interface.event = interface_event
     clock_device = false
     quantize_midi = false
 
-    for id, device in pairs(midi.vports) do
-        devices[id] = device.name
-    end
+    midi_device = midi.connect(1)
+    midi_device.event = Passthrough.device_event
+    midi_interface = midi.connect(2)
+    midi_interface.event = Passthrough.interface_event
+
+    devices = getAvailableMidi()
 
     params:add_group("PASSTHROUGH", 8)
     params:add {
@@ -97,6 +107,7 @@ function Passthrough.init()
         id = "midi_device",
         name = "Device",
         options = devices,
+        default = 1,
         action = function(value)
             midi_device.event = nil
             midi_device = midi.connect(value)
@@ -109,6 +120,7 @@ function Passthrough.init()
         id = "midi_interface",
         name = "Interface",
         options = devices,
+        default = 2,
         action = function(value)
             midi_interface.event = nil
             midi_interface = midi.connect(value)
@@ -116,13 +128,19 @@ function Passthrough.init()
         end
     }
 
-    local channels = {"all"}
+    local channels = {}
     for i = 1, 16 do
         table.insert(channels, i)
     end
-    params:add {type = "option", id = "device_channel", name = "Device channel", options = channels}
+    params:add {
+        type = "option",
+        id = "device_channel",
+        name = "Device channel",
+        options = channels,
+        default = 1
+    }
 
-    params:add {type = "option", id = "interface_channel", name = "Interface channel", options = channels}
+    params:add {type = "option", id = "interface_channel", name = "Interface channel", options = channels, default = 1}
 
     params:add {
         type = "option",
