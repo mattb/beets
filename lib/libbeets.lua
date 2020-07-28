@@ -333,7 +333,7 @@ end
 function Beets:load_directory(path)
   self:clear_loops()
 
-  local f = io.popen('ls ' .. path .. '/*.wav')
+  local f = io.popen('ls "' .. path .. '"/*.wav')
   local filenames = {}
   for name in f:lines() do
     table.insert(filenames, name)
