@@ -22,7 +22,8 @@ local layout = {
   horiz_spacing = 9,
   vert_spacing = 9,
   left_margin = 10,
-  top_margin = 23
+  top_margin = 23,
+  sidebar_top_margin = 10
 }
 
 function Beets.new(options)
@@ -920,12 +921,12 @@ function Beets:drawPlaybackUI()
 
     -- draw event indicators
     screen.level(15)
-    screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.top_margin)
+    screen.move(layout.left_margin + self.beat_count * layout.horiz_spacing + 30, layout.sidebar_top_margin)
     screen.text(self.played_loop_index)
     for y, e in ipairs(EVENT_ORDER) do
       screen.move(
         layout.left_margin + self.beat_count * layout.horiz_spacing + 30,
-        layout.top_margin + layout.vert_spacing * y
+        layout.sidebar_top_margin + layout.vert_spacing * y
       )
       if self.events[e] == 1 then
         screen.level(15)
