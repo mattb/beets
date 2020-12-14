@@ -4,6 +4,7 @@ Beets.__index = Beets
 local ControlSpec = require 'controlspec'
 local Formatters = require 'formatters'
 
+local RENDER_SAMPLES = 72
 local BREAK_OFFSET = 5
 local VOICE_OFFSET = 100
 local EVENT_ORDER = {'<', '>', 'R', 'S', 'B'}
@@ -16,6 +17,13 @@ local PROBABILITY_ORDER = {
 }
 local json = include('lib/json')
 local inspect = include('lib/inspect')
+
+local layout = {
+  horiz_spacing = 9,
+  vert_spacing = 9,
+  left_margin = 10,
+  top_margin = 23
+}
 
 function Beets.new(options)
   local softcut_voice_id = options.softcut_voice_id or 1
@@ -392,8 +400,10 @@ function Beets:load_loop(index, loop)
   loop_info.index = index
   loop_info.enabled = 1
   loop_info.beat_enabled = {1, 1, 1, 1, 1, 1, 1, 1}
+  loop_info.waveform_samples = {}
 
   softcut.buffer_read_mono(filename, 0, loop_info.start, -1, 1, 1)
+  softcut.render_buffer(self.id, loop_info.start, loop_info.duration, RENDER_SAMPLES)
 
   self.loop_index_to_filename[index] = filename
   self.loops_by_filename[filename] = loop_info
@@ -644,19 +654,26 @@ function Beets:add_params(arcify)
   arcify:register(self.id .. '_' .. 'beat_end', 0.05)
 end
 
-local layout = {
-  horiz_spacing = 9,
-  vert_spacing = 9,
-  left_margin = 10,
-  top_margin = 10
-}
-
 function Beets:_drawCurrentLoopGrid(options)
   local played_index = options.played_index or self.played_index
   local beatstep = options.beatstep or self.beatstep
   local loop_index = options.loop_index or self.loop_index
 
   local loop = self.loops_by_filename[self.loop_index_to_filename[loop_index]]
+  local scale = 10
+  local x_pos = 1
+  for i,s in ipairs(loop.waveform_samples) do
+    if played_index == math.floor(i / (RENDER_SAMPLES / 8)) then
+      screen.level(15)
+    else
+      screen.level(2)
+    end
+    local height = util.round(math.abs(s) * (scale))
+    screen.move(util.linlin(0,RENDER_SAMPLES,layout.left_margin,layout.left_margin + layout.horiz_spacing * 8 - 1,x_pos), 10 - height)
+    screen.line_rel(0, 2 * height)
+    screen.stroke()
+    x_pos = x_pos + 1
+  end
   for i = 0, 7 do
     screen.rect(
       layout.left_margin + layout.horiz_spacing * i,
@@ -975,6 +992,15 @@ function Beets:enc(n, d)
     self.editing_mode.cursor_location = (self.editing_mode.cursor_location + (d / 50.0)) % self.beat_count
     redraw()
   else
+  end
+end
+
+function Beets:on_render(start, i, s)
+  for i = 1, self.loop_count do
+    local loop = self:loop_at_index(i)
+    if loop.start == start then
+      loop.waveform_samples = s
+    end
   end
 end
 

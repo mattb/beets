@@ -31,6 +31,14 @@ local beets2 = Beets.new {softcut_voice_id = 2}
 local editing = false
 local g = grid.connect()
 
+softcut.event_render(function(ch, start, i, s)
+  if ch == 1 then
+    beets:on_render(start, i, s)
+  else
+    beets2:on_render(start, i, s)
+  end
+end)
+
 g.key = function(x, y, z)
   if params:get('orientation') == 1 then -- horizontal
     if x < 9 then
