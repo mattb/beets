@@ -179,7 +179,7 @@ function Beets:play_slice(slice_index)
   self.played_loop_index = self.loop_index
 
   local loop = self:loop_at_index(self.played_loop_index)
-  local current_rate = loop.rate * (self.current_bpm / loop.bpm)
+  local current_rate = (self.current_bpm / loop.bpm)
 
   if (self:should('stutter')) then
     self.events['S'] = 1
@@ -374,9 +374,8 @@ function Beets:load_loop(index, loop)
   if f ~= nil then
     loop_info = json.decode(f:read('*a'))
   else
-    local ch, samples, samplerate = audio.file_info(filename)
+    local ch, samples, _ = audio.file_info(filename)
     loop_info.frames = samples
-    loop_info.rate = samplerate / 48000.0 -- compensate for files that aren't 48Khz
     loop_info.duration = samples / 48000.0
     loop_info.beat_types = {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '}
     loop_info.filename = filename
