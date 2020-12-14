@@ -6,7 +6,8 @@ local Formatters = require 'formatters'
 
 local RENDER_SAMPLES = 72
 local BREAK_OFFSET = 5
-local VOICE_OFFSET = 100
+local VOICE_OFFSET = 20
+local RECORD_OFFSET = 200
 local EVENT_ORDER = {'<', '>', 'R', 'S', 'B'}
 local PROBABILITY_ORDER = {
   'jump_back',
@@ -40,6 +41,9 @@ function Beets.new(options)
     loop_count = 0,
     editing = false,
     editing_mode = {cursor_location = 0},
+    recording = false,
+    recording_requested = false,
+
     amplitude = 1,
     -- state that changes on the beat
     beatstep = 0,
@@ -70,7 +74,7 @@ function Beets.new(options)
       jump = 0,
       jump_back = 0
     },
-    ui = {slice_buttons_down = {}, mute_button = 0, shift_button = 0}
+    ui = {slice_buttons_down = {}, mute_button = 0, shift_button = 0, record_button = 0}
   }
 
   setmetatable(i, Beets)
@@ -114,11 +118,55 @@ function Beets:advance_step(in_beatstep, in_bpm)
     return
   end
   if self.beatstep == 0 then
+    if self.recording_requested then
+      self:start_recording()
+    end
     self.on_beat_one()
   end
   self:calculate_next_slice()
   self:play_slice(self.index)
   self.played_index = self.index
+end
+
+function Beets:start_recording()
+  self.recording = true
+  self.enable_mutations = false
+  self:mute(true)
+  softcut.rec(self.id, 1)
+  softcut.rec_offset(self.id, RECORD_OFFSET)
+  audio.level_adc_cut(self.id)
+  softcut.level_input_cut(1, self.id, 1.0)
+  softcut.level_input_cut(2, self.id, 1.0)
+  softcut.rec_level(1, 1.0)
+  softcut.pre_level(1, 0.0)
+  clock.run(
+    function()
+      clock.sync(4)
+      self:stop_recording()
+    end
+  )
+end
+
+function Beets:stop_recording()
+  softcut.rec(self.id, 0)
+
+  local loop = self:loop_at_index(self.loop_index)
+  local position = loop.start + RECORD_OFFSET
+  util.make_dir(_path.audio .. 'beets/rec')
+  local filename = _path.audio .. 'beets/rec/' .. math.floor(util.time()) .. '.wav'
+  softcut.buffer_write_mono(filename, position, loop.duration, 1)
+  util.os_capture('rm -f ' .. filename .. '.json')
+  self:load_loop(self.loop_count + 1, {file = filename})
+  self.loop_index = self.loop_count
+
+  audio.level_adc_cut(self.id)
+  softcut.level_input_cut(1, self.id, 0.0)
+  softcut.level_input_cut(2, self.id, 0.0)
+
+  self.recording = false
+  self.recording_requested = false
+  self.enable_mutations = true
+  self:mute(false)
 end
 
 function Beets:instant_toggle_mute()
@@ -364,6 +412,7 @@ function Beets:save_loop_info(loop_info)
 end
 
 function Beets:load_loop(index, loop)
+  print("Loading loop index " .. index .. " " .. inspect(loop))
   local filename = loop.file
   local kicks = loop.kicks
   local snares = loop.snares
@@ -711,6 +760,13 @@ function Beets:grid_key(x, y, z)
   if self.loop_count == 0 or self.editing then
     return
   end
+  if x == 8 and y == 6 then
+    self.ui.record_button = z
+    if z == 0 then
+      self.recording_requested = not self.recording_requested
+    end
+    redraw()
+  end
   if x == 8 and y == 8 then
     self.ui.mute_button = z
     if z == 0 then
@@ -823,6 +879,17 @@ function Beets:drawGridUI(g, top_x, top_y)
   else
     g:led(top_x + 0, top_y + 2, 4)
   end
+  
+  -- record
+  local record_brightness = 4
+  if self.ui.record_button == 1 then
+    record_brightness = 15
+  else
+    if self.recording_requested then
+      record_brightness = 12
+    end
+  end
+  g:led(top_x + 7, top_y + 5, record_brightness)
 
   local mute_brightness = 4
   if self.ui.mute_button == 1 then
