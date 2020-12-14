@@ -43,6 +43,7 @@ function Beets.new(options)
     editing_mode = {cursor_location = 0},
     recording = false,
     recording_requested = false,
+    recording_requested_loop = 0,
 
     amplitude = 1,
     -- state that changes on the beat
@@ -156,8 +157,13 @@ function Beets:stop_recording()
   local filename = _path.audio .. 'beets/rec/' .. math.floor(util.time()) .. '.wav'
   softcut.buffer_write_mono(filename, position, loop.duration, 1)
   util.os_capture('rm -f ' .. filename .. '.json')
-  self:load_loop(self.loop_count + 1, {file = filename})
-  self.loop_index = self.loop_count
+  if self.recording_requested_loop == 0 then
+    self.loop_count = self:load_loop(self.loop_count + 1, {file = filename})
+    self.loop_index = self.loop_count
+  else
+    self.loop_index = self:load_loop(self.recording_requested_loop, {file = filename})
+    self.recording_requested_loop = 0
+  end
 
   audio.level_adc_cut(self.id)
   softcut.level_input_cut(1, self.id, 0.0)
@@ -398,7 +404,7 @@ function Beets:load_directory(path)
   table.sort(filenames)
 
   for i, name in ipairs(filenames) do
-    self:load_loop(i, {file = name})
+    self.loop_count = self:load_loop(i, {file = name})
     i = i + 1
   end
 end
@@ -456,8 +462,8 @@ function Beets:load_loop(index, loop)
 
   self.loop_index_to_filename[index] = filename
   self.loops_by_filename[filename] = loop_info
-  self.loop_count = index
   self:reset_loop_index_param()
+  return index
 end
 
 function Beets:softcut_init()
@@ -841,7 +847,11 @@ function Beets:grid_key(x, y, z)
   end
 
   if y == 2 and x <= self.loop_count then
-    if self.ui.shift_button == 1 then
+    if self.ui.record_button == 1 then
+      if z == 1 then
+	self.recording_requested_loop = x
+      end
+    elseif self.ui.shift_button == 1 then
       if z == 1 and x ~= self.loop_index then
         self:toggle_loop_enabled(x)
       end
