@@ -70,7 +70,11 @@ function Beets.new(options)
       jump = 0,
       jump_back = 0
     },
-    ui = {slice_buttons_down = {}, mute_button = 0, shift_button = 0}
+    ui = {slice_buttons_down = {}, mute_button = 0, shift_button = 0},
+    midi_device = nil,
+    midi_channel = 1,
+    midi_root_note = 36,
+    midi_last_note = nil
   }
 
   setmetatable(i, Beets)
@@ -153,6 +157,10 @@ function Beets:play_nothing()
   softcut.level(self.id, 0)
 end
 
+function Beets:set_midi(device)
+  self.midi_device = device
+end
+
 function Beets:random_loop_index()
   local timeout = self.loop_count
   local l = math.random(self.loop_count)
@@ -205,6 +213,14 @@ function Beets:play_slice(slice_index)
 
   local position = loop.start + (slice_index * (loop.duration / self.beat_count))
   softcut.position(self.id, position)
+  
+  if self.midi_device ~= nil then
+    if self.midi_last_note ~= nil then
+      self.midi_device:note_off(self.midi_last_note, 127, self.midi_channel)
+    end
+    self.midi_last_note = self.midi_root_note + slice_index
+    self.midi_device:note_on(self.midi_last_note, 127, self.midi_channel)
+  end
 
   if not self.editing then
     self:notify_beat(loop.beat_types[slice_index + 1])

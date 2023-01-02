@@ -129,6 +129,14 @@ function init_beets_dir()
   end
 end
 
+function getAvailableMidi()
+  d = {}
+  for id, device in pairs(midi.vports) do
+      d[id] = device.name
+  end
+  return d
+end
+
 function init()
   init_beets_dir()
 
@@ -167,6 +175,18 @@ function init()
 
   beets:add_params(arcify)
   beets2:add_params(arcify)
+  
+  params:add_separator('MIDI')
+  params:add {
+      type = "option",
+      id = "beets_midi_device",
+      name = "Device",
+      options = getAvailableMidi(),
+      default = 1,
+      action = function(value)
+        beets:set_midi(midi.connect(value))
+      end
+  }
 
   params:add_separator('UTILITIES')
   Passthrough.init()
